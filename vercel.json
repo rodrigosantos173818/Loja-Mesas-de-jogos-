@@ -1,0 +1,11 @@
+{
+  "functions": { "api/frete.ts": { "maxDuration": 20 } },
+  "rewrites": [
+    { "source": "/produtos", "destination": "/index.html" },
+    { "source": "/categoria/:category", "destination": "/index.html" },
+    { "source": "/produto/:slug", "destination": "/index.html" },
+    { "source": "/carrinho", "destination": "/index.html" },
+    { "source": "/checkout", "destination": "/index.html" },
+    { "source": "/admin", "destination": "/index.html" }
+  ]
+}
