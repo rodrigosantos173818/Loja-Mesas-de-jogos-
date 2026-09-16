@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { salePrice, seedProducts } from '../src/data/products'
 
 type ApiRequest = { method?: string; body?: { cep?: unknown; items?: unknown } }
 type ApiResponse = {
@@ -17,6 +16,31 @@ type FreightProduct = {
   widthCm: number
   heightCm: number
 }
+
+const fallbackProducts: FreightProduct[] = [
+  { id: 'sinuca-pro-08', price: 7990, weightKg: 180, lengthCm: 260, widthCm: 145, heightCm: 85 },
+  { id: 'futmesa-curve-08', price: 4990, weightKg: 95, lengthCm: 300, widthCm: 170, heightCm: 85 },
+  {
+    id: 'ping-pong-match-08',
+    price: 3690,
+    weightKg: 76,
+    lengthCm: 274,
+    widthCm: 152,
+    heightCm: 76,
+  },
+  { id: 'pebolim-arena-08', price: 2890, weightKg: 72, lengthCm: 142, widthCm: 80, heightCm: 90 },
+  { id: 'sinuca-club-08', price: 6490, weightKg: 160, lengthCm: 240, widthCm: 135, heightCm: 85 },
+  { id: 'futmesa-play-08', price: 4290, weightKg: 88, lengthCm: 280, widthCm: 160, heightCm: 85 },
+  {
+    id: 'ping-pong-competition-08',
+    price: 4190,
+    weightKg: 82,
+    lengthCm: 274,
+    widthCm: 152,
+    heightCm: 76,
+  },
+  { id: 'pebolim-club-08', price: 2490, weightKg: 68, lengthCm: 135, widthCm: 78, heightCm: 88 },
+]
 type MelhorEnvioResult = {
   name?: string
   company?: { name?: string }
@@ -83,14 +107,7 @@ export default async function handler(request: ApiRequest, response: ApiResponse
           heightCm: Number(row.height_cm),
         }))
     } else if (!process.env.SUPABASE_URL) {
-      products = seedProducts.map((item) => ({
-        id: item.id,
-        price: salePrice(item),
-        weightKg: item.weightKg,
-        lengthCm: item.lengthCm,
-        widthCm: item.widthCm,
-        heightCm: item.heightCm,
-      }))
+      products = fallbackProducts
     }
     if (items.some((item) => !products.some((product) => product.id === item.id)))
       return response.status(200).json({ quotes: [], consultation: true })
