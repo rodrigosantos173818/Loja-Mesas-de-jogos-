@@ -5,6 +5,7 @@ import { useStore } from '@/context/StoreContext'
 import { categoryLabel, isVisibleProduct, salePrice } from '@/data/products'
 import { FreightCalculator } from '@/components/FreightCalculator'
 import { ProductCard } from '@/components/ProductCard'
+import { ProductImageCarousel } from '@/components/ProductImageCarousel'
 import { Button } from '@/components/ui/button'
 import { currency } from '@/lib/utils'
 
@@ -13,15 +14,10 @@ export function ProductPage() {
   const navigate = useNavigate()
   const { products, categories, addToCart, loading } = useStore()
   const [quantity, setQuantity] = useState(1)
-  const [imageIndex, setImageIndex] = useState(0)
   const product = products.find((item) => item.slug === slug && isVisibleProduct(item, categories))
   useEffect(() => {
     setQuantity(1)
-    setImageIndex(0)
   }, [slug])
-  useEffect(() => {
-    setImageIndex((current) => Math.min(current, Math.max(0, (product?.images.length || 1) - 1)))
-  }, [product?.images.length])
   if (loading)
     return (
       <main className="inner-page">
@@ -64,29 +60,12 @@ export function ProductPage() {
           <span>{product.name}</span>
         </div>
         <div className="product-detail">
-          <div className="product-gallery">
-            <div className="product-main-image">
-              <img
-                src={product.images[imageIndex] || '/images/sinuca-hero.webp'}
-                alt={`${product.name} — imagem ${imageIndex + 1}`}
-              />
-              {product.premium && <span className="product-label">LINHA PREMIUM</span>}
-            </div>
-            {product.images.length > 1 && (
-              <div className="product-thumbnails">
-                {product.images.map((image, index) => (
-                  <button
-                    key={image}
-                    onClick={() => setImageIndex(index)}
-                    className={index === imageIndex ? 'active' : ''}
-                    aria-label={`Ver foto ${index + 1}`}
-                  >
-                    <img src={image} alt="" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <ProductImageCarousel
+            key={product.id}
+            images={product.images}
+            productName={product.name}
+            premium={product.premium}
+          />
           <div className="product-info">
             <p className="eyebrow green">
               {categoryLabel(product.category, categories)} / ARENA 08
