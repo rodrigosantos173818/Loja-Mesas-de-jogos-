@@ -34,6 +34,7 @@ export type Product = {
   widthCm: number
   heightCm: number
   volumes: number
+  displayOrder: number | null
   images: string[]
   featured: boolean
   premium: boolean
@@ -108,6 +109,7 @@ export const seedProducts: Product[] = [
     widthCm: 145,
     heightCm: 85,
     volumes: 1,
+    displayOrder: null,
     images: ['/images/sinuca-hero.webp'],
     featured: true,
     premium: true,
@@ -135,6 +137,7 @@ export const seedProducts: Product[] = [
     widthCm: 170,
     heightCm: 85,
     volumes: 1,
+    displayOrder: null,
     images: ['/images/futmesa.webp'],
     featured: true,
     premium: true,
@@ -158,6 +161,7 @@ export const seedProducts: Product[] = [
     widthCm: 152,
     heightCm: 76,
     volumes: 1,
+    displayOrder: null,
     images: ['/images/ping-pong.webp'],
     featured: true,
     premium: false,
@@ -181,6 +185,7 @@ export const seedProducts: Product[] = [
     widthCm: 80,
     heightCm: 90,
     volumes: 1,
+    displayOrder: null,
     images: ['/images/pebolim.webp'],
     featured: true,
     premium: false,
@@ -204,6 +209,7 @@ export const seedProducts: Product[] = [
     widthCm: 135,
     heightCm: 85,
     volumes: 1,
+    displayOrder: null,
     images: ['/images/sinuca-hero.webp'],
     featured: false,
     premium: false,
@@ -227,6 +233,7 @@ export const seedProducts: Product[] = [
     widthCm: 160,
     heightCm: 85,
     volumes: 1,
+    displayOrder: null,
     images: ['/images/futmesa.webp'],
     featured: false,
     premium: false,
@@ -249,6 +256,7 @@ export const seedProducts: Product[] = [
     widthCm: 152,
     heightCm: 76,
     volumes: 1,
+    displayOrder: null,
     images: ['/images/ping-pong.webp'],
     featured: false,
     premium: true,
@@ -272,6 +280,7 @@ export const seedProducts: Product[] = [
     widthCm: 78,
     heightCm: 88,
     volumes: 1,
+    displayOrder: null,
     images: ['/images/pebolim.webp'],
     featured: false,
     premium: false,

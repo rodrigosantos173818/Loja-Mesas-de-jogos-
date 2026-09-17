@@ -23,6 +23,7 @@ export function newProduct(category = '', brand = ''): Product {
     widthCm: 0,
     heightCm: 0,
     volumes: 1,
+    displayOrder: null,
     images: [],
     featured: false,
     premium: false,

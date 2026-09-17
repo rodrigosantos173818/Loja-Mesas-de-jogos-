@@ -2,6 +2,8 @@
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
+  ArrowDown,
+  ArrowUp,
   Badge,
   ClipboardList,
   ExternalLink,
@@ -62,6 +64,7 @@ export function AdminPage() {
     brands,
     saveProduct,
     deleteProduct,
+    reorderProducts,
     saveCategory,
     deleteCategory,
     saveBrand,
@@ -83,6 +86,7 @@ export function AdminPage() {
   const [orderStatus, setOrderStatus] = useState('all')
   const [openOrder, setOpenOrder] = useState<string | null>(null)
   const [changingOrder, setChangingOrder] = useState<string | null>(null)
+  const [reorderingProducts, setReorderingProducts] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -162,6 +166,27 @@ export function AdminPage() {
       setNotice(product.active ? 'Produto desativado.' : 'Produto ativado.')
     } catch (cause) {
       setNotice(errorMessage(cause, 'Não foi possível alterar o status.'))
+    }
+  }
+
+  async function moveProduct(productId: string, step: -1 | 1) {
+    const filteredIndex = filteredProducts.findIndex((item) => item.id === productId)
+    const target = filteredProducts[filteredIndex + step]
+    if (filteredIndex < 0 || !target || reorderingProducts) return
+    const next = [...products]
+    const sourceIndex = next.findIndex((item) => item.id === productId)
+    const targetIndex = next.findIndex((item) => item.id === target.id)
+    const moved = next[sourceIndex]
+    next[sourceIndex] = next[targetIndex]
+    next[targetIndex] = moved
+    setReorderingProducts(true)
+    try {
+      await reorderProducts(next.map((item) => item.id))
+      setNotice('Ordem dos produtos atualizada automaticamente.')
+    } catch (cause) {
+      setNotice(errorMessage(cause, 'Não foi possível atualizar a ordem dos produtos.'))
+    } finally {
+      setReorderingProducts(false)
     }
   }
 
@@ -450,6 +475,7 @@ export function AdminPage() {
                         <th>MARCA</th>
                         <th>PREÇO</th>
                         <th>PIX</th>
+                        <th>ORDEM</th>
                         <th>STATUS</th>
                         <th>AÇÕES</th>
                       </tr>
@@ -475,6 +501,32 @@ export function AdminPage() {
                             )}
                           </td>
                           <td>{currency(item.pixPrice)}</td>
+                          <td>
+                            <div className="admin-order-controls">
+                              <span>{item.displayOrder ?? '—'}</span>
+                              <button
+                                type="button"
+                                disabled={reorderingProducts || filteredProducts[0]?.id === item.id}
+                                onClick={() => void moveProduct(item.id, -1)}
+                                title="Mover para cima"
+                                aria-label={`Mover ${item.name} para cima`}
+                              >
+                                <ArrowUp size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                disabled={
+                                  reorderingProducts ||
+                                  filteredProducts[filteredProducts.length - 1]?.id === item.id
+                                }
+                                onClick={() => void moveProduct(item.id, 1)}
+                                title="Mover para baixo"
+                                aria-label={`Mover ${item.name} para baixo`}
+                              >
+                                <ArrowDown size={15} />
+                              </button>
+                            </div>
+                          </td>
                           <td>
                             <span className={item.active ? 'status-active' : 'status-inactive'}>
                               {item.active ? 'Ativo' : 'Inativo'}

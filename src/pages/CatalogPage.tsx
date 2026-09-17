@@ -13,7 +13,7 @@ export function CatalogPage() {
   const activeCategories = categories.filter((item) => item.active)
   const activeBrands = brands.filter((item) => item.active)
   const [search, setSearch] = useState('')
-  const [sort, setSort] = useState('featured')
+  const [sort, setSort] = useState('display')
   const [brand, setBrand] = useState('all')
   const category: Category | 'all' =
     routeCategory && activeCategories.some((item) => item.slug === routeCategory)
@@ -31,6 +31,11 @@ export function CatalogPage() {
           .toLowerCase()
           .includes(search.toLowerCase()),
     )
+    if (sort === 'display')
+      result.sort(
+        (a, b) =>
+          (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER),
+      )
     if (sort === 'lowest') result.sort((a, b) => a.price - b.price)
     if (sort === 'highest') result.sort((a, b) => b.price - a.price)
     if (sort === 'featured') result.sort((a, b) => Number(b.featured) - Number(a.featured))
@@ -114,6 +119,7 @@ export function CatalogPage() {
                 onChange={(event) => setSort(event.target.value)}
                 aria-label="Ordenar produtos"
               >
+                <option value="display">Ordem da vitrine</option>
                 <option value="featured">Destaques</option>
                 <option value="lowest">Menor preço</option>
                 <option value="highest">Maior preço</option>

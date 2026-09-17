@@ -188,9 +188,35 @@ on conflict (slug) do nothing;
 alter table public.products add column if not exists promotional_price numeric(12,2);
 alter table public.products add column if not exists volumes integer not null default 1;
 alter table public.products add column if not exists brand text;
+alter table public.products add column if not exists display_order integer;
 update public.products set brand = 'arena-08' where brand is null or trim(brand) = '';
 alter table public.products alter column brand set default 'arena-08';
 alter table public.products alter column brand set not null;
+with ranked as (
+  select id, row_number() over (order by created_at asc, id asc)::integer as position
+  from public.products
+  where display_order is null
+)
+update public.products products
+set display_order = ranked.position
+from ranked
+where products.id = ranked.id;
+create index if not exists products_display_order_idx
+  on public.products (display_order asc nulls last);
+create or replace function public.set_product_order(product_ids uuid[])
+returns void language plpgsql security definer set search_path = '' as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Acesso administrativo necessário' using errcode = '42501';
+  end if;
+  update public.products products
+  set display_order = ordered.position::integer
+  from unnest(product_ids) with ordinality as ordered(id, position)
+  where products.id = ordered.id;
+end;
+$$;
+revoke all on function public.set_product_order(uuid[]) from public;
+grant execute on function public.set_product_order(uuid[]) to authenticated;
 alter table public.products drop constraint if exists products_category_check;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'products_category_fkey') then

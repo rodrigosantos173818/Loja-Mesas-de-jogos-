@@ -38,6 +38,7 @@ type StoreContextValue = {
   clearCart: () => void
   saveProduct: (product: Product) => Promise<void>
   deleteProduct: (id: string) => Promise<void>
+  reorderProducts: (orderedIds: string[]) => Promise<void>
   refreshProducts: () => Promise<void>
   refreshCatalog: () => Promise<void>
   saveCategory: (category: StoreCategory, originalSlug?: string) => Promise<void>
@@ -56,6 +57,7 @@ function readLocalProducts(): Product[] {
           ...item,
           promotionalPrice: item.promotionalPrice ?? null,
           volumes: item.volumes ?? 1,
+          displayOrder: item.displayOrder ?? null,
           brand: item.brand ?? 'arena-08',
         }))
       : seedProducts
@@ -90,11 +92,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setLoading(false)
       return
     }
+    const client = supabase
     try {
+      const loadProducts = async () => {
+        const ordered = await client
+          .from('products')
+          .select('*')
+          .order('display_order', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: true })
+        if (ordered.error && ordered.error.message.includes('display_order')) {
+          return client.from('products').select('*').order('created_at', { ascending: true })
+        }
+        return ordered
+      }
       const [productResult, categoryResult, brandResult] = await Promise.all([
-        supabase.from('products').select('*').order('created_at', { ascending: false }),
-        supabase.from('categories').select('*').order('sort_order', { ascending: true }),
-        supabase.from('brands').select('*').order('sort_order', { ascending: true }),
+        loadProducts(),
+        client.from('categories').select('*').order('sort_order', { ascending: true }),
+        client.from('brands').select('*').order('sort_order', { ascending: true }),
       ])
       if (productResult.data && !productResult.error) setProducts(productResult.data.map(fromDb))
       if (categoryResult.data && !categoryResult.error)
@@ -202,6 +216,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setProducts(next)
     }
   }
+  async function reorderProducts(orderedIds: string[]) {
+    if (supabase) {
+      const { error } = await supabase.rpc('set_product_order', { product_ids: orderedIds })
+      if (error) throw error
+      await refreshCatalog()
+      broadcast.current?.postMessage('changed')
+    } else {
+      const positions = new Map(orderedIds.map((id, index) => [id, index + 1]))
+      const next = products
+        .map((product) => ({ ...product, displayOrder: positions.get(product.id) ?? null }))
+        .sort(
+          (a, b) =>
+            (a.displayOrder ?? Number.MAX_SAFE_INTEGER) -
+            (b.displayOrder ?? Number.MAX_SAFE_INTEGER),
+        )
+      localStorage.setItem(PRODUCT_KEY, JSON.stringify(next))
+      setProducts(next)
+    }
+  }
   async function saveCategory(category: StoreCategory, originalSlug?: string) {
     if (!supabase) throw new Error('Configure o Supabase para gerenciar categorias.')
     const row = categoryToDb(category)
@@ -252,6 +285,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       clearCart,
       saveProduct,
       deleteProduct,
+      reorderProducts,
       refreshProducts,
       refreshCatalog,
       saveCategory,

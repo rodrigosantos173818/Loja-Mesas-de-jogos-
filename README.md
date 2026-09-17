@@ -18,7 +18,7 @@ Sem variáveis de ambiente, o catálogo público usa produtos de demonstração.
 3. Copie `.env.example` para `.env.local` e preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 4. Para a API de frete consultar os dados reais do catálogo, configure também `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` somente nas variáveis do servidor da Vercel. Nunca exponha a service role em `VITE_`.
 
-Em um projeto que já executou o esquema anteriormente, execute também [`supabase/brands-migration.sql`](supabase/brands-migration.sql) uma vez. A migração cria as marcas, vincula os produtos existentes à marca **Arena 08** e atualiza RLS, Realtime e checkout.
+Em um projeto que já executou o esquema anteriormente, execute também [`supabase/brands-migration.sql`](supabase/brands-migration.sql) e [`supabase/product-order-migration.sql`](supabase/product-order-migration.sql) uma vez. As migrações criam as marcas, vinculam os produtos existentes à marca **Arena 08** e adicionam a ordenação manual da vitrine.
 
 O login fica em `/admin/login` e `/admin` é protegido por sessão e por `profiles.role = 'admin'`. A sessão é persistida pelo Supabase Auth; contas comuns são bloqueadas. Produtos, categorias, marcas, pedidos e imagens usam RLS e políticas de Storage. O bucket público `product-images` guarda as imagens de produtos e categorias; somente administradores autenticados podem enviar ou apagar arquivos. A primeira imagem do produto é a principal, e a ordem configurada no painel aparece na galeria pública.
 
