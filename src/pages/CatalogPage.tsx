@@ -11,10 +11,8 @@ export function CatalogPage() {
   const [searchParams] = useSearchParams()
   const { products, categories, brands, loading } = useStore()
   const activeCategories = categories.filter((item) => item.active)
-  const activeBrands = brands.filter((item) => item.active)
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('display')
-  const [brand, setBrand] = useState('all')
   const category: Category | 'all' =
     routeCategory && activeCategories.some((item) => item.slug === routeCategory)
       ? (routeCategory as Category)
@@ -25,7 +23,6 @@ export function CatalogPage() {
       (item) =>
         isVisibleProduct(item, categories, brands) &&
         (category === 'all' || item.category === category) &&
-        (brand === 'all' || item.brand === brand) &&
         (!premiumOnly || item.premium) &&
         `${item.name} ${item.description} ${brandLabel(item.brand, brands)}`
           .toLowerCase()
@@ -40,7 +37,7 @@ export function CatalogPage() {
     if (sort === 'highest') result.sort((a, b) => b.price - a.price)
     if (sort === 'featured') result.sort((a, b) => Number(b.featured) - Number(a.featured))
     return result
-  }, [products, categories, brands, category, brand, premiumOnly, search, sort])
+  }, [products, categories, brands, category, premiumOnly, search, sort])
   const title = premiumOnly
     ? 'LINHA PREMIUM'
     : category === 'all'
@@ -97,21 +94,6 @@ export function CatalogPage() {
                 onChange={(event) => setSearch(event.target.value)}
               />
             </div>
-            <label className="sort-select">
-              <span>Marca</span>
-              <select
-                value={brand}
-                onChange={(event) => setBrand(event.target.value)}
-                aria-label="Filtrar por marca"
-              >
-                <option value="all">Todas as marcas</option>
-                {activeBrands.map((item) => (
-                  <option key={item.slug} value={item.slug}>
-                    {item.name}
-                  </option>
-                ))}
-              </select>
-            </label>
             <label className="sort-select">
               <SlidersHorizontal size={17} />
               <select
