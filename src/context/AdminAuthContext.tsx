@@ -79,7 +79,16 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       setStatus('anonymous')
       throw new Error('E-mail ou senha inválidos.')
     }
-    const nextRole = await getRole(data.user)
+    let nextRole: ProfileRole | null = null
+    try {
+      nextRole = await getRole(data.user)
+    } catch {
+      await supabase.auth.signOut()
+      setUser(null)
+      setRole(null)
+      setStatus('anonymous')
+      throw new Error('Não foi possível verificar o perfil administrativo. Tente novamente.')
+    }
     if (nextRole !== 'admin') {
       await supabase.auth.signOut()
       setUser(null)

@@ -57,11 +57,11 @@ export function AdminLoginPage() {
 
   const queryError = searchParams.get('error')
   const initialError =
-    queryError === 'forbidden'
+    status === 'unavailable' || queryError === 'config'
+      ? 'A conexão com o Supabase não está configurada neste ambiente.'
+      : queryError === 'forbidden'
       ? 'Sua conta está autenticada, mas não possui o perfil admin.'
-      : queryError === 'config'
-        ? 'Configure as variáveis do Supabase para habilitar o acesso.'
-        : ''
+      : ''
 
   return (
     <main className="admin-auth-page">
@@ -123,7 +123,7 @@ export function AdminLoginPage() {
               {message}
             </p>
           )}
-          <Button type="submit" disabled={submitting || status === 'unavailable'}>
+          <Button type="submit" disabled={submitting} aria-busy={submitting}>
             {submitting ? 'Aguarde...' : mode === 'login' ? 'Entrar' : 'Criar conta'}{' '}
             <ArrowRight size={17} />
           </Button>
