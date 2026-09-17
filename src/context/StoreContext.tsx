@@ -7,13 +7,29 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { seedCategories, seedProducts, type Product, type StoreCategory } from '@/data/products'
-import { categoryFromDb, categoryToDb, fromDb, supabase, toDb } from '@/lib/supabase'
+import {
+  seedBrands,
+  seedCategories,
+  seedProducts,
+  type Product,
+  type StoreBrand,
+  type StoreCategory,
+} from '@/data/products'
+import {
+  brandFromDb,
+  brandToDb,
+  categoryFromDb,
+  categoryToDb,
+  fromDb,
+  supabase,
+  toDb,
+} from '@/lib/supabase'
 
 type CartItem = { productId: string; quantity: number }
 type StoreContextValue = {
   products: Product[]
   categories: StoreCategory[]
+  brands: StoreBrand[]
   loading: boolean
   cart: CartItem[]
   cartCount: number
@@ -26,6 +42,8 @@ type StoreContextValue = {
   refreshCatalog: () => Promise<void>
   saveCategory: (category: StoreCategory, originalSlug?: string) => Promise<void>
   deleteCategory: (slug: string) => Promise<void>
+  saveBrand: (brand: StoreBrand, originalSlug?: string) => Promise<void>
+  deleteBrand: (slug: string) => Promise<void>
 }
 const StoreContext = createContext<StoreContextValue | null>(null)
 const PRODUCT_KEY = 'arena08-products'
@@ -39,6 +57,7 @@ function readLocalProducts(): Product[] {
           ...item,
           promotionalPrice: item.promotionalPrice ?? null,
           volumes: item.volumes ?? 1,
+          brand: item.brand ?? 'arena-08',
         }))
       : seedProducts
   } catch {
@@ -59,6 +78,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [categories, setCategories] = useState<StoreCategory[]>(() =>
     supabase ? [] : seedCategories,
   )
+  const [brands, setBrands] = useState<StoreBrand[]>(() => (supabase ? [] : seedBrands))
   const [cart, setCart] = useState<CartItem[]>(readCart)
   const [loading, setLoading] = useState(Boolean(supabase))
   const broadcast = useRef<BroadcastChannel | null>(null)
@@ -67,18 +87,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!supabase) {
       setProducts(readLocalProducts())
       setCategories(seedCategories)
+      setBrands(seedBrands)
       setLoading(false)
       return
     }
     try {
-      const [productResult, categoryResult] = await Promise.all([
+      const [productResult, categoryResult, brandResult] = await Promise.all([
         supabase.from('products').select('*').order('created_at', { ascending: false }),
         supabase.from('categories').select('*').order('sort_order', { ascending: true }),
+        supabase.from('brands').select('*').order('sort_order', { ascending: true }),
       ])
       if (productResult.data && !productResult.error) setProducts(productResult.data.map(fromDb))
       if (categoryResult.data && !categoryResult.error)
         setCategories(categoryResult.data.map(categoryFromDb))
       else setCategories((current) => (current.length ? current : seedCategories))
+      if (brandResult.data && !brandResult.error) setBrands(brandResult.data.map(brandFromDb))
+      else setBrands((current) => (current.length ? current : seedBrands))
     } catch {
       // Mantém o último catálogo disponível durante uma falha temporária de rede.
     } finally {
@@ -96,6 +120,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         void refreshCatalog()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, () => {
+        void refreshCatalog()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'brands' }, () => {
         void refreshCatalog()
       })
       .subscribe()
@@ -203,10 +230,33 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await refreshCatalog()
     broadcast.current?.postMessage('changed')
   }
+  async function saveBrand(brand: StoreBrand, originalSlug?: string) {
+    if (!supabase) throw new Error('Configure o Supabase para gerenciar marcas.')
+    const row = brandToDb(brand)
+    const result = originalSlug
+      ? await supabase.from('brands').update(row).eq('slug', originalSlug).select('slug').single()
+      : await supabase.from('brands').insert(row).select('slug').single()
+    if (result.error) throw result.error
+    await refreshCatalog()
+    broadcast.current?.postMessage('changed')
+  }
+  async function deleteBrand(slug: string) {
+    if (!supabase) throw new Error('Configure o Supabase para gerenciar marcas.')
+    const { error } = await supabase
+      .from('brands')
+      .delete()
+      .eq('slug', slug)
+      .select('slug')
+      .single()
+    if (error) throw error
+    await refreshCatalog()
+    broadcast.current?.postMessage('changed')
+  }
   const value = useMemo(
     () => ({
       products,
       categories,
+      brands,
       loading,
       cart,
       cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
@@ -219,8 +269,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       refreshCatalog,
       saveCategory,
       deleteCategory,
+      saveBrand,
+      deleteBrand,
     }),
-    [products, categories, loading, cart],
+    [products, categories, brands, loading, cart],
   )
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

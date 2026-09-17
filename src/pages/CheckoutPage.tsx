@@ -9,18 +9,19 @@ import { Button } from '@/components/ui/button'
 import { cleanCep, currency, formatCep, whatsappUrl } from '@/lib/utils'
 
 export function CheckoutPage() {
-  const { products, categories, cart, loading } = useStore()
+  const { products, categories, brands, cart, loading } = useStore()
   const lines = useMemo(
     () =>
       cart
         .map((item) => ({
           item,
           product: products.find(
-            (product) => product.id === item.productId && isVisibleProduct(product, categories),
+            (product) =>
+              product.id === item.productId && isVisibleProduct(product, categories, brands),
           ),
         }))
         .filter((line) => line.product !== undefined),
-    [cart, products, categories],
+    [cart, products, categories, brands],
   )
   const subtotal = lines.reduce(
     (sum, line) => sum + salePrice(line.product!) * line.item.quantity,

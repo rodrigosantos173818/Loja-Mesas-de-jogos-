@@ -6,7 +6,7 @@ import { FreightCalculator } from '@/components/FreightCalculator'
 import { currency } from '@/lib/utils'
 
 export function CartPage() {
-  const { products, categories, cart, updateQuantity, loading } = useStore()
+  const { products, categories, brands, cart, updateQuantity, loading } = useStore()
   if (loading)
     return (
       <main className="inner-page">
@@ -17,7 +17,7 @@ export function CartPage() {
     .map((item) => ({
       item,
       product: products.find(
-        (product) => product.id === item.productId && isVisibleProduct(product, categories),
+        (product) => product.id === item.productId && isVisibleProduct(product, categories, brands),
       ),
     }))
     .filter((line) => line.product !== undefined)

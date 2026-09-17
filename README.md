@@ -18,11 +18,13 @@ Sem variáveis de ambiente, o catálogo público usa produtos de demonstração.
 3. Copie `.env.example` para `.env.local` e preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 4. Para a API de frete consultar os dados reais do catálogo, configure também `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` somente nas variáveis do servidor da Vercel. Nunca exponha a service role em `VITE_`.
 
-O login fica em `/admin/login` e `/admin` é protegido por sessão e por `profiles.role = 'admin'`. A sessão é persistida pelo Supabase Auth; contas comuns são bloqueadas. Produtos, categorias, pedidos e imagens usam RLS e políticas de Storage. O bucket público `product-images` guarda as imagens de produtos e categorias; somente administradores autenticados podem enviar ou apagar arquivos. A primeira imagem do produto é a principal, e a ordem configurada no painel aparece na galeria pública.
+Em um projeto que já executou o esquema anteriormente, execute também [`supabase/brands-migration.sql`](supabase/brands-migration.sql) uma vez. A migração cria as marcas, vincula os produtos existentes à marca **Arena 08** e atualiza RLS, Realtime e checkout.
+
+O login fica em `/admin/login` e `/admin` é protegido por sessão e por `profiles.role = 'admin'`. A sessão é persistida pelo Supabase Auth; contas comuns são bloqueadas. Produtos, categorias, marcas, pedidos e imagens usam RLS e políticas de Storage. O bucket público `product-images` guarda as imagens de produtos e categorias; somente administradores autenticados podem enviar ou apagar arquivos. A primeira imagem do produto é a principal, e a ordem configurada no painel aparece na galeria pública.
 
 O checkout registra um pedido no Supabase pela função `place_order` antes de abrir o WhatsApp. Visitantes podem criar pedidos por essa função, mas não conseguem ler ou alterar pedidos diretamente. O painel permite consultar clientes, entrega e itens e atualizar o status. Sem Supabase, o checkout mantém o fluxo de demonstração pelo WhatsApp, sem criar pedidos no painel.
 
-As tabelas `products` e `categories` entram na publicação `supabase_realtime` para atualizar a vitrine em outras abas. A loja também refaz a consulta ao voltar para a aba. O esquema promove o usuário principal já criado para `profiles.role = 'admin'`. Para promover outro usuário, execute `update public.profiles set role = 'admin' where id = 'UUID';`. Não inclua a service role no frontend.
+As tabelas `products`, `categories` e `brands` entram na publicação `supabase_realtime` para atualizar a vitrine em outras abas. A loja também refaz a consulta ao voltar para a aba. O esquema promove o usuário principal já criado para `profiles.role = 'admin'`. Para promover outro usuário, execute `update public.profiles set role = 'admin' where id = 'UUID';`. Não inclua a service role no frontend.
 
 ## Frete
 

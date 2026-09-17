@@ -3,14 +3,15 @@ import { Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ImagePicker } from '@/components/admin/ImagePicker'
-import type { Product, StoreCategory } from '@/data/products'
+import type { Product, StoreBrand, StoreCategory } from '@/data/products'
 
-export function newProduct(category = ''): Product {
+export function newProduct(category = '', brand = ''): Product {
   return {
     id: `new-${crypto.randomUUID()}`,
     name: '',
     slug: '',
     category,
+    brand,
     description: '',
     details: [],
     price: 0,
@@ -32,6 +33,7 @@ export function newProduct(category = ''): Product {
 type Props = {
   product: Product
   categories: StoreCategory[]
+  brands: StoreBrand[]
   onSave: (product: Product) => Promise<void>
   onCancel: () => void
 }
@@ -75,7 +77,7 @@ function DecimalInput({ value, onChange, required = false, optional = false }: D
   )
 }
 
-export function ProductEditor({ product, categories, onSave, onCancel }: Props) {
+export function ProductEditor({ product, categories, brands, onSave, onCancel }: Props) {
   const [draft, setDraft] = useState(product)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -91,6 +93,7 @@ export function ProductEditor({ product, categories, onSave, onCancel }: Props) 
       !draft.name.trim() ||
       !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.slug) ||
       !categories.some((item) => item.slug === draft.category) ||
+      !brands.some((item) => item.slug === draft.brand) ||
       !draft.description.trim() ||
       draft.price <= 0 ||
       draft.pixPrice <= 0 ||
@@ -109,7 +112,7 @@ export function ProductEditor({ product, categories, onSave, onCancel }: Props) 
       !draft.images.length
     ) {
       setError(
-        'Confira nome, slug, categoria, preços, descrição, imagem e medidas. O preço promocional deve ser menor que o preço normal.',
+        'Confira nome, slug, categoria, marca, preços, descrição, imagem e medidas. O preço promocional deve ser menor que o preço normal.',
       )
       return
     }
@@ -164,6 +167,22 @@ export function ProductEditor({ product, categories, onSave, onCancel }: Props) 
           >
             <option value="">Selecione</option>
             {categories.map((item) => (
+              <option key={item.slug} value={item.slug}>
+                {item.name}
+                {item.active ? '' : ' (inativa)'}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Marca
+          <select
+            required
+            value={draft.brand}
+            onChange={(event) => update('brand', event.target.value)}
+          >
+            <option value="">Selecione</option>
+            {brands.map((item) => (
               <option key={item.slug} value={item.slug}>
                 {item.name}
                 {item.active ? '' : ' (inativa)'}

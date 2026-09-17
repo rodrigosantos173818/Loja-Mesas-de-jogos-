@@ -170,8 +170,27 @@ values
   ('pebolim', 'Pebolim', '/images/pebolim.webp', 'A disputa começa aqui', 4)
 on conflict (slug) do nothing;
 
+create table if not exists public.brands (
+  slug text primary key,
+  name text not null unique,
+  description text not null default '',
+  sort_order integer not null default 0,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint brands_slug_format check (slug ~ '^[a-z0-9]+(-[a-z0-9]+)*$')
+);
+
+insert into public.brands (slug, name, description, sort_order)
+values ('arena-08', 'Arena 08', 'Mesas de jogos Arena 08', 1)
+on conflict (slug) do nothing;
+
 alter table public.products add column if not exists promotional_price numeric(12,2);
 alter table public.products add column if not exists volumes integer not null default 1;
+alter table public.products add column if not exists brand text;
+update public.products set brand = 'arena-08' where brand is null or trim(brand) = '';
+alter table public.products alter column brand set default 'arena-08';
+alter table public.products alter column brand set not null;
 alter table public.products drop constraint if exists products_category_check;
 do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'products_category_fkey') then
@@ -186,6 +205,11 @@ do $$ begin
   if not exists (select 1 from pg_constraint where conname = 'products_volumes_check') then
     alter table public.products add constraint products_volumes_check check (volumes between 1 and 20);
   end if;
+  if not exists (select 1 from pg_constraint where conname = 'products_brand_fkey') then
+    alter table public.products add constraint products_brand_fkey
+      foreign key (brand) references public.brands(slug)
+      on update cascade on delete restrict;
+  end if;
 end $$;
 
 create or replace function public.touch_updated_at()
@@ -194,6 +218,9 @@ begin new.updated_at = now(); return new; end;
 $$;
 drop trigger if exists categories_updated_at on public.categories;
 create trigger categories_updated_at before update on public.categories
+  for each row execute function public.touch_updated_at();
+drop trigger if exists brands_updated_at on public.brands;
+create trigger brands_updated_at before update on public.brands
   for each row execute function public.touch_updated_at();
 
 alter table public.categories enable row level security;
@@ -211,11 +238,30 @@ drop policy if exists "admin exclui categorias" on public.categories;
 create policy "admin exclui categorias" on public.categories for delete to authenticated
   using (public.is_admin());
 
+alter table public.brands enable row level security;
+drop policy if exists "marcas públicas e admin" on public.brands;
+create policy "marcas públicas e admin" on public.brands for select to anon, authenticated
+  using (active or public.is_admin());
+drop policy if exists "admin insere marcas" on public.brands;
+create policy "admin insere marcas" on public.brands for insert to authenticated
+  with check (public.is_admin());
+drop policy if exists "admin atualiza marcas" on public.brands;
+create policy "admin atualiza marcas" on public.brands for update to authenticated
+  using (public.is_admin())
+  with check (public.is_admin());
+drop policy if exists "admin exclui marcas" on public.brands;
+create policy "admin exclui marcas" on public.brands for delete to authenticated
+  using (public.is_admin());
+
 drop policy if exists "catálogo público e admin" on public.products;
 create policy "catálogo público e admin" on public.products for select to anon, authenticated
   using (
     public.is_admin()
-    or (active and exists (select 1 from public.categories c where c.slug = category and c.active))
+    or (
+      active
+      and exists (select 1 from public.categories c where c.slug = category and c.active)
+      and exists (select 1 from public.brands b where b.slug = brand and b.active)
+    )
   );
 
 create table if not exists public.orders (
@@ -317,7 +363,8 @@ begin
     if qty < 1 or qty > 20 then raise exception 'Quantidade inválida'; end if;
     select p.* into product_row from public.products p
       join public.categories c on c.slug = p.category
-      where p.id = (entry->>'id')::uuid and p.active and c.active;
+      join public.brands b on b.slug = p.brand
+      where p.id = (entry->>'id')::uuid and p.active and c.active and b.active;
     if not found then raise exception 'Produto indisponível'; end if;
     unit_amount := coalesce(product_row.promotional_price, product_row.price);
     insert into public.order_items
@@ -343,16 +390,19 @@ do $$ begin
     if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'categories') then
       alter publication supabase_realtime add table public.categories;
     end if;
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'brands') then
+      alter publication supabase_realtime add table public.brands;
+    end if;
   end if;
 end $$;
 
 -- Privilégios da API: a RLS decide quais linhas cada sessão pode usar.
-revoke all on public.admin_users, public.profiles, public.products, public.categories, public.orders, public.order_items
+revoke all on public.admin_users, public.profiles, public.products, public.categories, public.brands, public.orders, public.order_items
   from anon, authenticated;
 grant select on public.admin_users to authenticated;
 grant select on public.profiles to authenticated;
 grant update on public.profiles to authenticated;
-grant select on public.products, public.categories to anon, authenticated;
-grant insert, update, delete on public.products, public.categories to authenticated;
+grant select on public.products, public.categories, public.brands to anon, authenticated;
+grant insert, update, delete on public.products, public.categories, public.brands to authenticated;
 grant select, update on public.orders to authenticated;
 grant select on public.order_items to authenticated;

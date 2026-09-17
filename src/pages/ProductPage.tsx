@@ -1,8 +1,18 @@
 ﻿import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowRight, Check, Minus, Plus, Ruler, ShoppingBag, Truck, Weight } from 'lucide-react'
+import {
+  ArrowRight,
+  Badge,
+  Check,
+  Minus,
+  Plus,
+  Ruler,
+  ShoppingBag,
+  Truck,
+  Weight,
+} from 'lucide-react'
 import { useStore } from '@/context/StoreContext'
-import { categoryLabel, isVisibleProduct, salePrice } from '@/data/products'
+import { brandLabel, categoryLabel, isVisibleProduct, salePrice } from '@/data/products'
 import { FreightCalculator } from '@/components/FreightCalculator'
 import { ProductCard } from '@/components/ProductCard'
 import { ProductImageCarousel } from '@/components/ProductImageCarousel'
@@ -12,9 +22,11 @@ import { currency } from '@/lib/utils'
 export function ProductPage() {
   const { slug } = useParams()
   const navigate = useNavigate()
-  const { products, categories, addToCart, loading } = useStore()
+  const { products, categories, brands, addToCart, loading } = useStore()
   const [quantity, setQuantity] = useState(1)
-  const product = products.find((item) => item.slug === slug && isVisibleProduct(item, categories))
+  const product = products.find(
+    (item) => item.slug === slug && isVisibleProduct(item, categories, brands),
+  )
   useEffect(() => {
     setQuantity(1)
   }, [slug])
@@ -38,7 +50,7 @@ export function ProductPage() {
   const related = products
     .filter(
       (item) =>
-        isVisibleProduct(item, categories) &&
+        isVisibleProduct(item, categories, brands) &&
         item.category === product.category &&
         item.id !== product.id,
     )
@@ -68,7 +80,7 @@ export function ProductPage() {
           />
           <div className="product-info">
             <p className="eyebrow green">
-              {categoryLabel(product.category, categories)} / ARENA 08
+              {categoryLabel(product.category, categories)} / {brandLabel(product.brand, brands)}
             </p>
             <h1>
               {product.name}
@@ -139,6 +151,11 @@ export function ProductPage() {
           </div>
           <div className="spec-card">
             <h3>MEDIDAS E TRANSPORTE</h3>
+            <div>
+              <Badge size={19} />
+              <span>Marca</span>
+              <strong>{brandLabel(product.brand, brands)}</strong>
+            </div>
             <div>
               <Ruler size={19} />
               <span>Comprimento</span>

@@ -1,12 +1,12 @@
 ﻿import { Link, useNavigate } from 'react-router-dom'
 import { ArrowUpRight, ShoppingBag } from 'lucide-react'
-import { type Product, categoryLabel, salePrice } from '@/data/products'
+import { type Product, brandLabel, categoryLabel, salePrice } from '@/data/products'
 import { useStore } from '@/context/StoreContext'
 import { currency } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 
 export function ProductCard({ product }: { product: Product }) {
-  const { addToCart, categories } = useStore()
+  const { addToCart, categories, brands } = useStore()
   const navigate = useNavigate()
   function buy() {
     addToCart(product.id)
@@ -30,7 +30,9 @@ export function ProductCard({ product }: { product: Product }) {
         {product.premium && <span className="product-label">LINHA PREMIUM</span>}
       </Link>
       <div className="product-body">
-        <span className="eyebrow">{categoryLabel(product.category, categories)}</span>
+        <span className="eyebrow">
+          {categoryLabel(product.category, categories)} / {brandLabel(product.brand, brands)}
+        </span>
         <Link to={`/produto/${product.slug}`} className="product-name">
           {product.name}
         </Link>

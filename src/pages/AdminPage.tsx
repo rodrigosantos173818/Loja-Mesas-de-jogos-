@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
+  Badge,
   ClipboardList,
   ExternalLink,
   LayoutDashboard,
@@ -19,8 +20,16 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CategoryEditor, newCategory } from '@/components/admin/CategoryEditor'
+import { BrandEditor, newBrand } from '@/components/admin/BrandEditor'
 import { ProductEditor, newProduct } from '@/components/admin/ProductEditor'
-import { categoryLabel, salePrice, type Product, type StoreCategory } from '@/data/products'
+import {
+  brandLabel,
+  categoryLabel,
+  salePrice,
+  type Product,
+  type StoreBrand,
+  type StoreCategory,
+} from '@/data/products'
 import { useStore } from '@/context/StoreContext'
 import { useAdminAuth } from '@/context/AdminAuthContext'
 import {
@@ -32,11 +41,12 @@ import {
 } from '@/lib/admin'
 import { currency } from '@/lib/utils'
 
-type Section = 'dashboard' | 'products' | 'categories' | 'orders'
+type Section = 'dashboard' | 'products' | 'categories' | 'brands' | 'orders'
 const sections = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'products', label: 'Produtos', icon: Package },
   { id: 'categories', label: 'Categorias', icon: Tags },
+  { id: 'brands', label: 'Marcas', icon: Badge },
   { id: 'orders', label: 'Pedidos', icon: ClipboardList },
 ] as const
 
@@ -49,20 +59,34 @@ const errorMessage = (cause: unknown, fallback: string) =>
   cause instanceof Error ? cause.message : fallback
 
 export function AdminPage() {
-  const { products, categories, saveProduct, deleteProduct, saveCategory, deleteCategory } =
-    useStore()
+  const {
+    products,
+    categories,
+    brands,
+    saveProduct,
+    deleteProduct,
+    saveCategory,
+    deleteCategory,
+    saveBrand,
+    deleteBrand,
+  } = useStore()
   const { signOut } = useAdminAuth()
   const [section, setSection] = useState<Section>('dashboard')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [editingCategory, setEditingCategory] = useState<StoreCategory | null>(null)
   const [originalCategorySlug, setOriginalCategorySlug] = useState<string | undefined>()
+  const [editingBrand, setEditingBrand] = useState<StoreBrand | null>(null)
+  const [originalBrandSlug, setOriginalBrandSlug] = useState<string | undefined>()
   const [orders, setOrders] = useState<Order[]>([])
   const [notice, setNotice] = useState('')
   const [productSearch, setProductSearch] = useState('')
   const [productCategory, setProductCategory] = useState('all')
+  const [productBrand, setProductBrand] = useState('all')
   const [productStatus, setProductStatus] = useState('all')
   const [categorySearch, setCategorySearch] = useState('')
   const [categoryStatus, setCategoryStatus] = useState('all')
+  const [brandSearch, setBrandSearch] = useState('')
+  const [brandStatus, setBrandStatus] = useState('all')
   const [orderSearch, setOrderSearch] = useState('')
   const [orderStatus, setOrderStatus] = useState('all')
   const [openOrder, setOpenOrder] = useState<string | null>(null)
@@ -91,6 +115,7 @@ export function AdminPage() {
     setSection(next)
     setEditingProduct(null)
     setEditingCategory(null)
+    setEditingBrand(null)
     setNotice('')
   }
 
@@ -105,6 +130,13 @@ export function AdminPage() {
     setEditingCategory(null)
     setOriginalCategorySlug(undefined)
     setNotice('Categoria salva. A loja pública já foi atualizada.')
+  }
+
+  async function persistBrand(brand: StoreBrand, originalSlug?: string) {
+    await saveBrand(brand, originalSlug)
+    setEditingBrand(null)
+    setOriginalBrandSlug(undefined)
+    setNotice('Marca salva. A loja pública já foi atualizada.')
   }
 
   async function removeProduct(product: Product) {
@@ -131,6 +163,20 @@ export function AdminPage() {
     }
   }
 
+  async function removeBrand(brand: StoreBrand) {
+    if (!window.confirm(`Excluir a marca “${brand.name}”?`)) return
+    try {
+      await deleteBrand(brand.slug)
+      setNotice('Marca excluída.')
+    } catch (cause) {
+      setNotice(
+        (cause as { code?: string })?.code === '23503'
+          ? 'Mova os produtos desta marca antes de excluí-la.'
+          : errorMessage(cause, 'Não foi possível excluir a marca.'),
+      )
+    }
+  }
+
   async function toggleProduct(product: Product) {
     try {
       await saveProduct({ ...product, active: !product.active })
@@ -144,6 +190,15 @@ export function AdminPage() {
     try {
       await saveCategory({ ...category, active: !category.active }, category.slug)
       setNotice(category.active ? 'Categoria desativada.' : 'Categoria ativada.')
+    } catch (cause) {
+      setNotice(errorMessage(cause, 'Não foi possível alterar o status.'))
+    }
+  }
+
+  async function toggleBrand(brand: StoreBrand) {
+    try {
+      await saveBrand({ ...brand, active: !brand.active }, brand.slug)
+      setNotice(brand.active ? 'Marca desativada.' : 'Marca ativada.')
     } catch (cause) {
       setNotice(errorMessage(cause, 'Não foi possível alterar o status.'))
     }
@@ -166,16 +221,22 @@ export function AdminPage() {
 
   const filteredProducts = products.filter(
     (item) =>
-      `${item.name} ${item.slug} ${item.category}`
+      `${item.name} ${item.slug} ${item.category} ${item.brand}`
         .toLowerCase()
         .includes(productSearch.toLowerCase()) &&
       (productCategory === 'all' || item.category === productCategory) &&
+      (productBrand === 'all' || item.brand === productBrand) &&
       (productStatus === 'all' || (productStatus === 'active' ? item.active : !item.active)),
   )
   const filteredCategories = categories.filter(
     (item) =>
       `${item.name} ${item.slug}`.toLowerCase().includes(categorySearch.toLowerCase()) &&
       (categoryStatus === 'all' || (categoryStatus === 'active' ? item.active : !item.active)),
+  )
+  const filteredBrands = brands.filter(
+    (item) =>
+      `${item.name} ${item.slug}`.toLowerCase().includes(brandSearch.toLowerCase()) &&
+      (brandStatus === 'all' || (brandStatus === 'active' ? item.active : !item.active)),
   )
   const filteredOrders = orders.filter(
     (item) =>
@@ -237,13 +298,20 @@ export function AdminPage() {
                     ? 'Seu catálogo, preços e imagens.'
                     : section === 'categories'
                       ? 'Organize a vitrine da loja.'
-                      : 'Acompanhe os pedidos recebidos.'}
+                      : section === 'brands'
+                        ? 'Gerencie as marcas do catálogo.'
+                        : 'Acompanhe os pedidos recebidos.'}
               </p>
             </div>
             {section === 'products' && !editingProduct && (
               <Button
                 onClick={() =>
-                  setEditingProduct(newProduct(categories.find((item) => item.active)?.slug || ''))
+                  setEditingProduct(
+                    newProduct(
+                      categories.find((item) => item.active)?.slug || '',
+                      brands.find((item) => item.active)?.slug || '',
+                    ),
+                  )
                 }
               >
                 <Plus size={17} /> Novo produto
@@ -257,6 +325,16 @@ export function AdminPage() {
                 }}
               >
                 <Plus size={17} /> Nova categoria
+              </Button>
+            )}
+            {section === 'brands' && !editingBrand && (
+              <Button
+                onClick={() => {
+                  setOriginalBrandSlug(undefined)
+                  setEditingBrand(newBrand(brands.length + 1))
+                }}
+              >
+                <Plus size={17} /> Nova marca
               </Button>
             )}
             {section === 'orders' && (
@@ -292,9 +370,9 @@ export function AdminPage() {
                   <small>de {categories.length} cadastradas</small>
                 </div>
                 <div>
-                  <span>PEDIDOS NOVOS</span>
-                  <strong>{orders.filter((item) => item.status === 'pending').length}</strong>
-                  <small>aguardando atendimento</small>
+                  <span>MARCAS ATIVAS</span>
+                  <strong>{brands.filter((item) => item.active).length}</strong>
+                  <small>de {brands.length} cadastradas</small>
                 </div>
                 <div>
                   <span>TOTAL DE PEDIDOS</span>
@@ -341,6 +419,10 @@ export function AdminPage() {
                       {categories.filter((item) => !item.active).length} categorias inativas
                     </span>
                   </div>
+                  <div className="admin-catalog-summary">
+                    <Badge size={22} />
+                    <span>{brands.filter((item) => !item.active).length} marcas inativas</span>
+                  </div>
                 </section>
               </div>
             </>
@@ -352,6 +434,7 @@ export function AdminPage() {
                 key={editingProduct.id}
                 product={editingProduct}
                 categories={categories}
+                brands={brands}
                 onSave={persistProduct}
                 onCancel={() => setEditingProduct(null)}
               />
@@ -383,6 +466,18 @@ export function AdminPage() {
                       ))}
                     </select>
                     <select
+                      aria-label="Filtrar por marca"
+                      value={productBrand}
+                      onChange={(event) => setProductBrand(event.target.value)}
+                    >
+                      <option value="all">Todas as marcas</option>
+                      {brands.map((item) => (
+                        <option key={item.slug} value={item.slug}>
+                          {item.name}
+                        </option>
+                      ))}
+                    </select>
+                    <select
                       aria-label="Filtrar por status"
                       value={productStatus}
                       onChange={(event) => setProductStatus(event.target.value)}
@@ -399,6 +494,7 @@ export function AdminPage() {
                       <tr>
                         <th>PRODUTO</th>
                         <th>CATEGORIA</th>
+                        <th>MARCA</th>
                         <th>PREÇO</th>
                         <th>PIX</th>
                         <th>STATUS</th>
@@ -418,6 +514,7 @@ export function AdminPage() {
                             </div>
                           </td>
                           <td>{categoryLabel(item.category, categories)}</td>
+                          <td>{brandLabel(item.brand, brands)}</td>
                           <td>
                             {currency(salePrice(item))}
                             {item.promotionalPrice && (
@@ -571,6 +668,110 @@ export function AdminPage() {
                   </table>
                   {!filteredCategories.length && (
                     <p className="admin-empty">Nenhuma categoria encontrada.</p>
+                  )}
+                </div>
+              </>
+            ))}
+
+          {section === 'brands' &&
+            (editingBrand ? (
+              <BrandEditor
+                key={originalBrandSlug || 'new'}
+                brand={editingBrand}
+                originalSlug={originalBrandSlug}
+                onSave={persistBrand}
+                onCancel={() => setEditingBrand(null)}
+              />
+            ) : (
+              <>
+                <div className="admin-toolbar">
+                  <span>
+                    {filteredBrands.length} DE {brands.length} MARCAS
+                  </span>
+                  <div className="admin-filters">
+                    <label className="admin-search">
+                      <Search size={16} />
+                      <Input
+                        placeholder="Buscar marca..."
+                        value={brandSearch}
+                        onChange={(event) => setBrandSearch(event.target.value)}
+                      />
+                    </label>
+                    <select
+                      aria-label="Filtrar marcas por status"
+                      value={brandStatus}
+                      onChange={(event) => setBrandStatus(event.target.value)}
+                    >
+                      <option value="all">Todos os status</option>
+                      <option value="active">Ativas</option>
+                      <option value="inactive">Inativas</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>MARCA</th>
+                        <th>DESCRIÇÃO</th>
+                        <th>ORDEM</th>
+                        <th>STATUS</th>
+                        <th>AÇÕES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredBrands.map((item) => (
+                        <tr key={item.slug}>
+                          <td>
+                            <div className="admin-customer-cell">
+                              <strong>{item.name}</strong>
+                              <small>{item.slug}</small>
+                            </div>
+                          </td>
+                          <td className="admin-description-cell">{item.description || '—'}</td>
+                          <td>{item.order}</td>
+                          <td>
+                            <span className={item.active ? 'status-active' : 'status-inactive'}>
+                              {item.active ? 'Ativa' : 'Inativa'}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="admin-row-actions">
+                              <button
+                                type="button"
+                                aria-label={`Editar ${item.name}`}
+                                title="Editar"
+                                onClick={() => {
+                                  setOriginalBrandSlug(item.slug)
+                                  setEditingBrand(item)
+                                }}
+                              >
+                                <Pencil size={17} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`${item.active ? 'Desativar' : 'Ativar'} ${item.name}`}
+                                title={item.active ? 'Desativar' : 'Ativar'}
+                                onClick={() => void toggleBrand(item)}
+                              >
+                                {item.active ? <EyeOff size={17} /> : <Eye size={17} />}
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Excluir ${item.name}`}
+                                title="Excluir"
+                                onClick={() => void removeBrand(item)}
+                              >
+                                <Trash2 size={17} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!filteredBrands.length && (
+                    <p className="admin-empty">Nenhuma marca encontrada.</p>
                   )}
                 </div>
               </>

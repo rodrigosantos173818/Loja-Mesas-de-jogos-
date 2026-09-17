@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Product, StoreCategory } from '@/data/products'
+import type { Product, StoreBrand, StoreCategory } from '@/data/products'
 import { publicSupabaseAnonKey, publicSupabaseUrl } from '@/lib/supabase-public'
 
 const url = import.meta.env.VITE_SUPABASE_URL?.trim() || publicSupabaseUrl
@@ -21,6 +21,7 @@ export function fromDb(row: Record<string, unknown>): Product {
     slug: String(row.slug),
     name: String(row.name),
     category: row.category as Product['category'],
+    brand: String(row.brand || 'arena-08'),
     description: String(row.description || ''),
     details: Array.isArray(row.details) ? row.details.map(String) : [],
     price: Number(row.price),
@@ -44,6 +45,7 @@ export function toDb(product: Product) {
     slug: product.slug,
     name: product.name,
     category: product.category,
+    brand: product.brand,
     description: product.description,
     details: product.details,
     price: product.price,
@@ -81,5 +83,25 @@ export function categoryToDb(category: StoreCategory) {
     description: category.description,
     sort_order: category.order,
     active: category.active,
+  }
+}
+
+export function brandFromDb(row: Record<string, unknown>): StoreBrand {
+  return {
+    slug: String(row.slug),
+    name: String(row.name),
+    description: String(row.description || ''),
+    order: Number(row.sort_order ?? 0),
+    active: Boolean(row.active),
+  }
+}
+
+export function brandToDb(brand: StoreBrand) {
+  return {
+    slug: brand.slug,
+    name: brand.name,
+    description: brand.description,
+    sort_order: brand.order,
+    active: brand.active,
   }
 }

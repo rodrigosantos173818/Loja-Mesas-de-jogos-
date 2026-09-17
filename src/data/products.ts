@@ -9,11 +9,20 @@ export type StoreCategory = {
   active: boolean
 }
 
+export type StoreBrand = {
+  slug: string
+  name: string
+  description: string
+  order: number
+  active: boolean
+}
+
 export type Product = {
   id: string
   slug: string
   name: string
   category: Category
+  brand: string
   description: string
   details: string[]
   price: number
@@ -30,6 +39,16 @@ export type Product = {
   premium: boolean
   active: boolean
 }
+
+export const seedBrands: StoreBrand[] = [
+  {
+    slug: 'arena-08',
+    name: 'Arena 08',
+    description: 'Mesas de jogos Arena 08',
+    order: 1,
+    active: true,
+  },
+]
 
 export const seedCategories: StoreCategory[] = [
   {
@@ -72,6 +91,7 @@ export const seedProducts: Product[] = [
     slug: 'mesa-de-sinuca-pro-08',
     name: 'Mesa de Sinuca Pro 08',
     category: 'sinuca',
+    brand: 'arena-08',
     description:
       'Uma mesa feita para partidas memoráveis. O acabamento em madeira escura, o pano verde profundo e a estrutura robusta dão ao ambiente a presença de uma arena particular.',
     details: [
@@ -98,6 +118,7 @@ export const seedProducts: Product[] = [
     slug: 'futmesa-curve-08',
     name: 'Futmesa Curve 08',
     category: 'futmesa',
+    brand: 'arena-08',
     description:
       'Curvas precisas e uma superfície de jogo responsiva para treinar domínio, reflexo e criatividade. Ideal para espaços de convivência que gostam de movimento.',
     details: [
@@ -124,6 +145,7 @@ export const seedProducts: Product[] = [
     slug: 'mesa-de-ping-pong-match-08',
     name: 'Mesa de Ping-Pong Match 08',
     category: 'ping-pong',
+    brand: 'arena-08',
     description:
       'Do saque ao ponto decisivo: uma mesa de tênis de mesa com área de jogo ampla, visual sóbrio e desempenho para partidas intensas.',
     details: ['Tampo com linhas de jogo', 'Rede inclusa', 'Estrutura firme para uso interno'],
@@ -146,6 +168,7 @@ export const seedProducts: Product[] = [
     slug: 'mesa-de-pebolim-arena-08',
     name: 'Mesa de Pebolim Arena 08',
     category: 'pebolim',
+    brand: 'arena-08',
     description:
       'Clássico de toda sala de jogos, com acabamento escuro e pegada esportiva para partidas rápidas, disputadas e cheias de energia.',
     details: ['Campo de jogo resistente', 'Manoplas confortáveis', 'Acabamento em madeira e preto'],
@@ -168,6 +191,7 @@ export const seedProducts: Product[] = [
     slug: 'mesa-de-sinuca-club-08',
     name: 'Mesa de Sinuca Club 08',
     category: 'sinuca',
+    brand: 'arena-08',
     description:
       'Presença marcante e jogabilidade confortável para reunir amigos em torno de uma boa partida.',
     details: ['Acabamento em madeira escura', 'Pano verde', 'Estrutura estável'],
@@ -190,6 +214,7 @@ export const seedProducts: Product[] = [
     slug: 'futmesa-play-08',
     name: 'Futmesa Play 08',
     category: 'futmesa',
+    brand: 'arena-08',
     description:
       'Uma forma nova de jogar bola com amigos, em família ou na área de lazer do condomínio.',
     details: ['Tampo curvo', 'Estrutura reforçada', 'Ideal para áreas cobertas'],
@@ -212,6 +237,7 @@ export const seedProducts: Product[] = [
     slug: 'mesa-de-ping-pong-competition-08',
     name: 'Mesa de Ping-Pong Competition 08',
     category: 'ping-pong',
+    brand: 'arena-08',
     description: 'Um clássico para quem quer mais velocidade, mais rallys e mais partidas.',
     details: ['Tampo de jogo com linhas', 'Rede inclusa', 'Estrutura para uso interno'],
     price: 4190,
@@ -233,6 +259,7 @@ export const seedProducts: Product[] = [
     slug: 'mesa-de-pebolim-club-08',
     name: 'Mesa de Pebolim Club 08',
     category: 'pebolim',
+    brand: 'arena-08',
     description:
       'A energia do futebol de mesa em um equipamento que dá personalidade à sala de jogos.',
     details: ['Campo de jogo resistente', 'Manoplas confortáveis', 'Estrutura estável'],
@@ -255,8 +282,16 @@ export const seedProducts: Product[] = [
 export const categoryLabel = (category: Category, categories: StoreCategory[] = seedCategories) =>
   categories.find((item) => item.slug === category)?.name ?? category
 
+export const brandLabel = (brand: string, brands: StoreBrand[] = seedBrands) =>
+  brands.find((item) => item.slug === brand)?.name ?? brand
+
 export const salePrice = (product: Product) => product.promotionalPrice ?? product.price
 
-export const isVisibleProduct = (product: Product, categories: StoreCategory[]) =>
+export const isVisibleProduct = (
+  product: Product,
+  categories: StoreCategory[],
+  brands: StoreBrand[] = seedBrands,
+) =>
   product.active &&
-  categories.some((category) => category.slug === product.category && category.active)
+  categories.some((category) => category.slug === product.category && category.active) &&
+  brands.some((brand) => brand.slug === product.brand && brand.active)

@@ -1533,6 +1533,7 @@ h2 em {
 }
 .catalog-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 .catalog-search,
@@ -1560,6 +1561,13 @@ h2 em {
   background: var(--background);
   color: var(--foreground);
   font-size: 11px;
+}
+.sort-select > span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .catalog-empty {
   display: flex;
@@ -2679,6 +2687,13 @@ h2 em {
   }
   .catalog-controls {
     width: 100%;
+  }
+  .catalog-controls .sort-select {
+    flex: 1 1 150px;
+  }
+  .catalog-controls .sort-select select {
+    flex: 1;
+    min-width: 0;
   }
   .catalog-search {
     flex: 1;

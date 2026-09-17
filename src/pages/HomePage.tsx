@@ -52,14 +52,14 @@ const faqs = [
 ]
 
 export function HomePage() {
-  const { products, categories, loading } = useStore()
+  const { products, categories, brands, loading } = useStore()
   const activeCategories = categories.filter((category) => category.active)
   const featured = products
-    .filter((product) => isVisibleProduct(product, categories) && product.featured)
+    .filter((product) => isVisibleProduct(product, categories, brands) && product.featured)
     .slice(0, 4)
   const premium =
-    products.find((product) => isVisibleProduct(product, categories) && product.premium) ||
-    products.find((product) => isVisibleProduct(product, categories))
+    products.find((product) => isVisibleProduct(product, categories, brands) && product.premium) ||
+    products.find((product) => isVisibleProduct(product, categories, brands))
   return (
     <main>
       <section className="hero">
