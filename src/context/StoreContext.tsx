@@ -43,7 +43,6 @@ type StoreContextValue = {
   saveCategory: (category: StoreCategory, originalSlug?: string) => Promise<void>
   deleteCategory: (slug: string) => Promise<void>
   saveBrand: (brand: StoreBrand, originalSlug?: string) => Promise<void>
-  deleteBrand: (slug: string) => Promise<void>
 }
 const StoreContext = createContext<StoreContextValue | null>(null)
 const PRODUCT_KEY = 'arena08-products'
@@ -240,18 +239,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await refreshCatalog()
     broadcast.current?.postMessage('changed')
   }
-  async function deleteBrand(slug: string) {
-    if (!supabase) throw new Error('Configure o Supabase para gerenciar marcas.')
-    const { error } = await supabase
-      .from('brands')
-      .delete()
-      .eq('slug', slug)
-      .select('slug')
-      .single()
-    if (error) throw error
-    await refreshCatalog()
-    broadcast.current?.postMessage('changed')
-  }
   const value = useMemo(
     () => ({
       products,
@@ -270,7 +257,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveCategory,
       deleteCategory,
       saveBrand,
-      deleteBrand,
     }),
     [products, categories, brands, loading, cart],
   )

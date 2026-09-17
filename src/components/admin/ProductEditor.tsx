@@ -34,8 +34,18 @@ type Props = {
   product: Product
   categories: StoreCategory[]
   brands: StoreBrand[]
-  onSave: (product: Product) => Promise<void>
+  onSave: (product: Product, brandName: string) => Promise<void>
   onCancel: () => void
+}
+
+function toSlug(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
 }
 
 type DecimalInputProps = {
@@ -79,6 +89,9 @@ function DecimalInput({ value, onChange, required = false, optional = false }: D
 
 export function ProductEditor({ product, categories, brands, onSave, onCancel }: Props) {
   const [draft, setDraft] = useState(product)
+  const [brandName, setBrandName] = useState(
+    () => brands.find((item) => item.slug === product.brand)?.name || product.brand,
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const isNew = product.id.startsWith('new-')
@@ -93,7 +106,8 @@ export function ProductEditor({ product, categories, brands, onSave, onCancel }:
       !draft.name.trim() ||
       !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(draft.slug) ||
       !categories.some((item) => item.slug === draft.category) ||
-      !brands.some((item) => item.slug === draft.brand) ||
+      !brandName.trim() ||
+      !toSlug(brandName) ||
       !draft.description.trim() ||
       draft.price <= 0 ||
       draft.pixPrice <= 0 ||
@@ -119,7 +133,13 @@ export function ProductEditor({ product, categories, brands, onSave, onCancel }:
     setSaving(true)
     setError('')
     try {
-      await onSave(draft)
+      const normalizedBrand = toSlug(brandName)
+      const existingBrand = brands.find(
+        (item) =>
+          item.slug === normalizedBrand ||
+          item.name.toLowerCase() === brandName.trim().toLowerCase(),
+      )
+      await onSave({ ...draft, brand: existingBrand?.slug || normalizedBrand }, brandName.trim())
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Não foi possível salvar o produto.')
     } finally {
@@ -159,6 +179,21 @@ export function ProductEditor({ product, categories, brands, onSave, onCancel }:
           />
         </label>
         <label>
+          Marca
+          <Input
+            required
+            list="product-brand-options"
+            placeholder="Ex.: Klopf"
+            value={brandName}
+            onChange={(event) => setBrandName(event.target.value)}
+          />
+          <datalist id="product-brand-options">
+            {brands.map((item) => (
+              <option key={item.slug} value={item.name} />
+            ))}
+          </datalist>
+        </label>
+        <label>
           Categoria
           <select
             required
@@ -167,22 +202,6 @@ export function ProductEditor({ product, categories, brands, onSave, onCancel }:
           >
             <option value="">Selecione</option>
             {categories.map((item) => (
-              <option key={item.slug} value={item.slug}>
-                {item.name}
-                {item.active ? '' : ' (inativa)'}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Marca
-          <select
-            required
-            value={draft.brand}
-            onChange={(event) => update('brand', event.target.value)}
-          >
-            <option value="">Selecione</option>
-            {brands.map((item) => (
               <option key={item.slug} value={item.slug}>
                 {item.name}
                 {item.active ? '' : ' (inativa)'}
