@@ -36,6 +36,45 @@ type Props = {
   onCancel: () => void
 }
 
+type DecimalInputProps = {
+  value: number | null
+  onChange: (value: number | null) => void
+  required?: boolean
+  optional?: boolean
+}
+
+function DecimalInput({ value, onChange, required = false, optional = false }: DecimalInputProps) {
+  const [text, setText] = useState(() =>
+    value === null || value === 0 ? '' : String(value).replace('.', ','),
+  )
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      required={required}
+      placeholder={optional ? 'Opcional' : 'Ex.: 0,75'}
+      value={text}
+      onChange={(event) => {
+        const next = event.target.value.replace(/\s/g, '')
+        if (!/^\d*(?:[.,]\d{0,2})?$/.test(next)) return
+        setText(next)
+        if (!next) {
+          onChange(optional ? null : 0)
+          return
+        }
+        const parsed = Number(next.replace(',', '.'))
+        if (Number.isFinite(parsed)) onChange(parsed)
+      }}
+      onBlur={() => {
+        if (!text || text === ',' || text === '.') return
+        const parsed = Number(text.replace(',', '.'))
+        if (Number.isFinite(parsed)) setText(String(parsed).replace('.', ','))
+      }}
+    />
+  )
+}
+
 export function ProductEditor({ product, categories, onSave, onCancel }: Props) {
   const [draft, setDraft] = useState(product)
   const [saving, setSaving] = useState(false)
@@ -134,81 +173,58 @@ export function ProductEditor({ product, categories, onSave, onCancel }: Props) 
         </label>
         <label>
           Preço normal (R$)
-          <Input
+          <DecimalInput
             required
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={draft.price || ''}
-            onChange={(event) => update('price', Number(event.target.value))}
+            value={draft.price}
+            onChange={(value) => update('price', value ?? 0)}
           />
         </label>
         <label>
           Preço Pix (R$)
-          <Input
+          <DecimalInput
             required
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={draft.pixPrice || ''}
-            onChange={(event) => update('pixPrice', Number(event.target.value))}
+            value={draft.pixPrice}
+            onChange={(value) => update('pixPrice', value ?? 0)}
           />
         </label>
         <label>
           Preço promocional (R$)
-          <Input
-            type="number"
-            min="0.01"
-            step="0.01"
-            placeholder="Opcional"
-            value={draft.promotionalPrice ?? ''}
-            onChange={(event) =>
-              update('promotionalPrice', event.target.value ? Number(event.target.value) : null)
-            }
+          <DecimalInput
+            optional
+            value={draft.promotionalPrice}
+            onChange={(value) => update('promotionalPrice', value)}
           />
         </label>
         <label>
           Peso (kg)
-          <Input
+          <DecimalInput
             required
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={draft.weightKg || ''}
-            onChange={(event) => update('weightKg', Number(event.target.value))}
+            value={draft.weightKg}
+            onChange={(value) => update('weightKg', value ?? 0)}
           />
         </label>
         <label>
           Comprimento (cm)
-          <Input
+          <DecimalInput
             required
-            type="number"
-            min="0.01"
-            step="0.1"
-            value={draft.lengthCm || ''}
-            onChange={(event) => update('lengthCm', Number(event.target.value))}
+            value={draft.lengthCm}
+            onChange={(value) => update('lengthCm', value ?? 0)}
           />
         </label>
         <label>
           Largura (cm)
-          <Input
+          <DecimalInput
             required
-            type="number"
-            min="0.01"
-            step="0.1"
-            value={draft.widthCm || ''}
-            onChange={(event) => update('widthCm', Number(event.target.value))}
+            value={draft.widthCm}
+            onChange={(value) => update('widthCm', value ?? 0)}
           />
         </label>
         <label>
           Altura (cm)
-          <Input
+          <DecimalInput
             required
-            type="number"
-            min="0.01"
-            step="0.1"
-            value={draft.heightCm || ''}
-            onChange={(event) => update('heightCm', Number(event.target.value))}
+            value={draft.heightCm}
+            onChange={(value) => update('heightCm', value ?? 0)}
           />
         </label>
         <label>
