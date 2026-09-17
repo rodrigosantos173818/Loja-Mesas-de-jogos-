@@ -60,6 +60,7 @@ export function CartPage() {
                   <Link to={`/produto/${product!.slug}`}>
                     <img
                       src={
+                        item.colorImage ||
                         product!.colors.find((color) => color.id === item.colorId)?.image ||
                         product!.images[0]
                       }
@@ -73,7 +74,9 @@ export function CartPage() {
                     </Link>
                     {item.colorId && (
                       <span className="cart-item-color">
-                        Cor: {product!.colors.find((color) => color.id === item.colorId)?.name}
+                        Cor:{' '}
+                        {item.colorName ||
+                          product!.colors.find((color) => color.id === item.colorId)?.name}
                       </span>
                     )}
                     <span className="cart-item-unit">

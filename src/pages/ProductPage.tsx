@@ -68,7 +68,7 @@ export function ProductPage() {
       setColorError('Selecione uma cor antes de adicionar ao carrinho.')
       return
     }
-    addToCart(product!.id, quantity, selectedColor?.id)
+    addToCart(product!.id, quantity, selectedColor)
     navigate('/carrinho')
   }
   return (

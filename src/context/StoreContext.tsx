@@ -12,6 +12,7 @@ import {
   seedCategories,
   seedProducts,
   type Product,
+  type ProductColor,
   type StoreBrand,
   type StoreCategory,
   type StoreColor,
@@ -28,7 +29,14 @@ import {
   toDb,
 } from '@/lib/supabase'
 
-export type CartItem = { productId: string; quantity: number; colorId?: string }
+export type CartItem = {
+  productId: string
+  quantity: number
+  colorId?: string
+  colorName?: string
+  colorHex?: string
+  colorImage?: string
+}
 type StoreContextValue = {
   products: Product[]
   categories: StoreCategory[]
@@ -36,7 +44,7 @@ type StoreContextValue = {
   loading: boolean
   cart: CartItem[]
   cartCount: number
-  addToCart: (productId: string, quantity?: number, colorId?: string) => void
+  addToCart: (productId: string, quantity?: number, color?: ProductColor) => void
   updateQuantity: (productId: string, quantity: number, colorId?: string) => void
   clearCart: () => void
   saveProduct: (product: Product) => Promise<void>
@@ -110,13 +118,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         return ordered
       }
+      const loadProductColors = async () => {
+        const ordered = await client
+          .from('product_colors')
+          .select('product_id,color_id,image,sort_order')
+          .order('sort_order', { ascending: true })
+        if (ordered.error && ordered.error.message.includes('sort_order')) {
+          return client.from('product_colors').select('product_id,color_id,image')
+        }
+        return ordered
+      }
       const [productResult, categoryResult, brandResult, colorResult, productColorResult] =
         await Promise.all([
           loadProducts(),
           client.from('categories').select('*').order('sort_order', { ascending: true }),
           client.from('brands').select('*').order('sort_order', { ascending: true }),
           client.from('colors').select('*').order('name', { ascending: true }),
-          client.from('product_colors').select('product_id,color_id,image'),
+          loadProductColors(),
         ])
       const loadedColors =
         colorResult.data && !colorResult.error ? colorResult.data.map(colorFromDb) : []
@@ -194,18 +212,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(CART_KEY, JSON.stringify(cart))
   }, [cart])
 
-  function addToCart(productId: string, quantity = 1, colorId?: string) {
+  function addToCart(productId: string, quantity = 1, color?: ProductColor) {
     setCart((current) => {
+      const colorId = color?.id
       const existing = current.find(
         (item) => item.productId === productId && item.colorId === colorId,
       )
       return existing
         ? current.map((item) =>
             item.productId === productId && item.colorId === colorId
-              ? { ...item, quantity: Math.min(20, item.quantity + quantity) }
+              ? {
+                  ...item,
+                  quantity: Math.min(20, item.quantity + quantity),
+                  colorName: color?.name,
+                  colorHex: color?.hex,
+                  colorImage: color?.image,
+                }
               : item,
           )
-        : [...current, { productId, quantity: Math.min(20, quantity), colorId }]
+        : [
+            ...current,
+            {
+              productId,
+              quantity: Math.min(20, quantity),
+              colorId,
+              colorName: color?.name,
+              colorHex: color?.hex,
+              colorImage: color?.image,
+            },
+          ]
     })
   }
   function updateQuantity(productId: string, quantity: number, colorId?: string) {
@@ -239,13 +274,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           removed.error.message.includes('product_colors'))
       if (removed.error && !(colorsSchemaMissing && !product.colors.length)) throw removed.error
       if (product.colors.length) {
-        const inserted = await supabase.from('product_colors').insert(
-          product.colors.map((color) => ({
+        let inserted = await supabase.from('product_colors').insert(
+          product.colors.map((color, index) => ({
             product_id: productId,
             color_id: color.id,
             image: color.image,
+            sort_order: index + 1,
           })),
         )
+        if (inserted.error && inserted.error.message.includes('sort_order')) {
+          inserted = await supabase.from('product_colors').insert(
+            product.colors.map((color) => ({
+              product_id: productId,
+              color_id: color.id,
+              image: color.image,
+            })),
+          )
+        }
         if (inserted.error) throw inserted.error
       }
       await refreshCatalog()

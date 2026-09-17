@@ -89,7 +89,7 @@ export function CheckoutPage() {
     const productsText = lines
       .map(
         (line) =>
-          `• ${line.product!.name}${line.item.colorId ? ` (${line.product!.colors.find((color) => color.id === line.item.colorId)?.name})` : ''} — ${line.item.quantity}x — ${currency(salePrice(line.product!) * line.item.quantity)}`,
+          `• ${line.product!.name}${line.item.colorId ? ` (${line.item.colorName || line.product!.colors.find((color) => color.id === line.item.colorId)?.name})` : ''} — ${line.item.quantity}x — ${currency(salePrice(line.product!) * line.item.quantity)}`,
       )
       .join('\n')
     const message = `Olá! Quero finalizar meu pedido na ARENA 08.\n\n${productsText}\n\nSubtotal: ${currency(subtotal)}\nFrete: confirmar para CEP ${form.cep}\n\nNome: ${form.name}\nE-mail: ${form.email}\nTelefone: ${form.phone}\nEntrega: ${form.address}, ${form.number}${form.complement ? `, ${form.complement}` : ''} — ${form.city}/${form.state} — CEP ${form.cep}${form.note ? `\nObservações: ${form.note}` : ''}\n\nGostaria de confirmar disponibilidade, entrega e pagamento.`
@@ -255,6 +255,7 @@ export function CheckoutPage() {
                 >
                   <img
                     src={
+                      line.item.colorImage ||
                       line.product!.colors.find((color) => color.id === line.item.colorId)?.image ||
                       line.product!.images[0]
                     }
@@ -265,7 +266,9 @@ export function CheckoutPage() {
                     {line.item.colorId && (
                       <small>
                         Cor:{' '}
-                        {line.product!.colors.find((color) => color.id === line.item.colorId)?.name}
+                        {line.item.colorName ||
+                          line.product!.colors.find((color) => color.id === line.item.colorId)
+                            ?.name}
                       </small>
                     )}
                     <span>

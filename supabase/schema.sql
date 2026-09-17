@@ -456,9 +456,12 @@ create table if not exists public.product_colors (
   product_id uuid not null references public.products(id) on update cascade on delete cascade,
   color_id uuid not null references public.colors(id) on update cascade on delete cascade,
   image text not null default '',
+  sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   primary key (product_id, color_id)
 );
+
+alter table public.product_colors add column if not exists sort_order integer not null default 0;
 
 create index if not exists product_colors_color_id_idx on public.product_colors(color_id);
 
