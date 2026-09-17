@@ -41,11 +41,13 @@ from public.admin_users admins
 join auth.users users on users.id = admins.user_id
 on conflict (id) do update set role = 'admin', email = excluded.email;
 
--- Administrador principal da loja.
+-- Administradores principais da loja. O e-mail permite promover a conta
+-- correta mesmo quando ela foi recriada e recebeu um novo UUID no Auth.
 insert into public.profiles (id, email, role)
 select id, coalesce(email, ''), 'admin'
 from auth.users
 where id = '94758066-39ca-41b4-ba04-5a7becc50ff5'::uuid
+   or lower(email) in ('r624989@gmail.com', 'r62498918@gmail.com')
 on conflict (id) do update set role = 'admin', email = excluded.email;
 
 create or replace function public.is_admin()
