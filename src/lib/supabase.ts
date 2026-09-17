@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Product, StoreCategory } from '@/data/products'
+import { publicSupabaseAnonKey, publicSupabaseUrl } from '@/lib/supabase-public'
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const url = import.meta.env.VITE_SUPABASE_URL?.trim() || publicSupabaseUrl
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim() || publicSupabaseAnonKey
 export const supabase =
   url && anonKey
     ? createClient(url, anonKey, {
