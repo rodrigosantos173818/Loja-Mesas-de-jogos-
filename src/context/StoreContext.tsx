@@ -33,7 +33,6 @@ type StoreContextValue = {
   products: Product[]
   categories: StoreCategory[]
   brands: StoreBrand[]
-  colors: StoreColor[]
   loading: boolean
   cart: CartItem[]
   cartCount: number
@@ -48,8 +47,7 @@ type StoreContextValue = {
   saveCategory: (category: StoreCategory, originalSlug?: string) => Promise<void>
   deleteCategory: (slug: string) => Promise<void>
   saveBrand: (brand: StoreBrand, originalSlug?: string) => Promise<void>
-  saveColor: (color: StoreColor) => Promise<void>
-  deleteColor: (id: string) => Promise<void>
+  saveColor: (color: StoreColor) => Promise<StoreColor>
 }
 const StoreContext = createContext<StoreContextValue | null>(null)
 const PRODUCT_KEY = 'arena08-products'
@@ -87,7 +85,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     supabase ? [] : seedCategories,
   )
   const [brands, setBrands] = useState<StoreBrand[]>(() => (supabase ? [] : seedBrands))
-  const [colors, setColors] = useState<StoreColor[]>([])
   const [cart, setCart] = useState<CartItem[]>(readCart)
   const [loading, setLoading] = useState(Boolean(supabase))
   const broadcast = useRef<BroadcastChannel | null>(null)
@@ -97,7 +94,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setProducts(readLocalProducts())
       setCategories(seedCategories)
       setBrands(seedBrands)
-      setColors([])
       setLoading(false)
       return
     }
@@ -146,7 +142,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       else setCategories((current) => (current.length ? current : seedCategories))
       if (brandResult.data && !brandResult.error) setBrands(brandResult.data.map(brandFromDb))
       else setBrands((current) => (current.length ? current : seedBrands))
-      if (!colorResult.error) setColors(loadedColors)
     } catch {
       // Mantém o último catálogo disponível durante uma falha temporária de rede.
     } finally {
@@ -338,22 +333,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       ? await supabase.from('colors').insert(row).select('id').single()
       : await supabase.from('colors').update(row).eq('id', color.id).select('id').single()
     if (result.error) throw result.error
-    await refreshCatalog()
-    broadcast.current?.postMessage('changed')
-  }
-  async function deleteColor(id: string) {
-    if (!supabase) throw new Error('Configure o Supabase para gerenciar cores.')
-    const { error } = await supabase.from('colors').delete().eq('id', id).select('id').single()
-    if (error) throw error
-    await refreshCatalog()
-    broadcast.current?.postMessage('changed')
+    const saved = {
+      ...color,
+      id: color.id.startsWith('new-') ? String(result.data.id) : color.id,
+    }
+    return saved
   }
   const value = useMemo(
     () => ({
       products,
       categories,
       brands,
-      colors,
       loading,
       cart,
       cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
@@ -369,9 +359,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteCategory,
       saveBrand,
       saveColor,
-      deleteColor,
     }),
-    [products, categories, brands, colors, loading, cart],
+    [products, categories, brands, loading, cart],
   )
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

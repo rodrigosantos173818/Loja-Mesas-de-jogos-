@@ -135,7 +135,11 @@ export function ProductPage() {
                       aria-label={color.name}
                       aria-pressed={selectedColorId === color.id}
                     >
-                      <span style={{ backgroundColor: color.hex }} />
+                      {color.image ? (
+                        <img src={color.image} alt="" />
+                      ) : (
+                        <span style={{ backgroundColor: color.hex }} />
+                      )}
                     </button>
                   ))}
                 </div>

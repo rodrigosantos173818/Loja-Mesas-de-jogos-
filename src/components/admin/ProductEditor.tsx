@@ -3,7 +3,7 @@ import { Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ImagePicker } from '@/components/admin/ImagePicker'
-import type { Product, StoreBrand, StoreCategory, StoreColor } from '@/data/products'
+import type { Product, StoreBrand, StoreCategory } from '@/data/products'
 
 export function newProduct(category = '', brand = ''): Product {
   return {
@@ -36,7 +36,6 @@ type Props = {
   product: Product
   categories: StoreCategory[]
   brands: StoreBrand[]
-  colors: StoreColor[]
   onSave: (product: Product, brandName: string) => Promise<void>
   onCancel: () => void
 }
@@ -90,7 +89,7 @@ function DecimalInput({ value, onChange, required = false, optional = false }: D
   )
 }
 
-export function ProductEditor({ product, categories, brands, colors, onSave, onCancel }: Props) {
+export function ProductEditor({ product, categories, brands, onSave, onCancel }: Props) {
   const [draft, setDraft] = useState(product)
   const [brandName, setBrandName] = useState(
     () => brands.find((item) => item.slug === product.brand)?.name || product.brand,
@@ -103,22 +102,31 @@ export function ProductEditor({ product, categories, brands, colors, onSave, onC
     setDraft((current) => ({ ...current, [key]: value }))
   }
 
-  function toggleColor(color: StoreColor) {
+  function addColor() {
     setDraft((current) => {
-      const selected = current.colors.some((item) => item.id === color.id)
       return {
         ...current,
-        colors: selected
-          ? current.colors.filter((item) => item.id !== color.id)
-          : [...current.colors, { ...color, image: '' }],
+        colors: [
+          ...current.colors,
+          {
+            id: `new-${crypto.randomUUID()}`,
+            name: '',
+            hex: '#000000',
+            active: true,
+            image: '',
+          },
+        ],
       }
     })
   }
 
-  function setColorImage(colorId: string, image: string) {
+  function updateColor(
+    colorId: string,
+    changes: Partial<Pick<Product['colors'][number], 'name' | 'hex' | 'image'>>,
+  ) {
     setDraft((current) => ({
       ...current,
-      colors: current.colors.map((item) => (item.id === colorId ? { ...item, image } : item)),
+      colors: current.colors.map((item) => (item.id === colorId ? { ...item, ...changes } : item)),
     }))
   }
 
@@ -145,10 +153,11 @@ export function ProductEditor({ product, categories, brands, colors, onSave, onC
       !Number.isInteger(draft.installmentCount) ||
       draft.installmentCount < 1 ||
       draft.installmentCount > 24 ||
+      draft.colors.some((color) => !color.name.trim() || !/^#[0-9A-F]{6}$/i.test(color.hex)) ||
       !draft.images.length
     ) {
       setError(
-        'Confira nome, slug, categoria, marca, preços, descrição, imagem e medidas. O preço promocional deve ser menor que o preço normal.',
+        'Confira nome, slug, categoria, marca, preços, descrição, imagem, medidas e as cores. O preço promocional deve ser menor que o preço normal.',
       )
       return
     }
@@ -341,44 +350,77 @@ export function ProductEditor({ product, categories, brands, colors, onSave, onC
       <section className="admin-product-colors">
         <div className="admin-section-heading">
           <div>
-            <h3>CORES DISPONÍVEIS</h3>
-            <p>Selecione as cores deste produto e, se quiser, envie uma imagem específica.</p>
+            <h3>CORES E VARIAÇÕES</h3>
+            <p>Cadastre todas as cores deste produto e uma imagem diferente para cada opção.</p>
           </div>
+          <Button type="button" variant="outline" onClick={addColor}>
+            Adicionar cor
+          </Button>
         </div>
-        {!colors.length && (
-          <p className="admin-empty">Cadastre uma cor na seção Cores antes de vinculá-la.</p>
+        {!draft.colors.length && (
+          <p className="admin-empty">Este produto ainda não possui variações de cor.</p>
         )}
         <div className="admin-color-options">
-          {colors
-            .filter((color) => color.active || draft.colors.some((item) => item.id === color.id))
-            .map((color) => {
-              const variant = draft.colors.find((item) => item.id === color.id)
-              return (
-                <div className="admin-color-option" key={color.id}>
-                  <label>
+          {draft.colors.map((color, index) => (
+            <div className="admin-color-option" key={color.id}>
+              <div className="admin-color-option-header">
+                <strong>COR {index + 1}</strong>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDraft((current) => ({
+                      ...current,
+                      colors: current.colors.filter((item) => item.id !== color.id),
+                    }))
+                  }
+                >
+                  Remover
+                </button>
+              </div>
+              <div className="admin-color-fields">
+                <label>
+                  Nome da cor
+                  <Input
+                    required
+                    value={color.name}
+                    placeholder="Ex.: Madeira avelã"
+                    onChange={(event) => updateColor(color.id, { name: event.target.value })}
+                  />
+                </label>
+                <label>
+                  Código HEX
+                  <div className="admin-hex-field">
                     <input
-                      type="checkbox"
-                      checked={Boolean(variant)}
-                      onChange={() => toggleColor(color)}
+                      type="color"
+                      value={color.hex}
+                      aria-label={`Selecionar cor ${index + 1}`}
+                      onChange={(event) =>
+                        updateColor(color.id, { hex: event.target.value.toUpperCase() })
+                      }
                     />
-                    <span className="color-swatch" style={{ backgroundColor: color.hex }} />
-                    {color.name}
-                    {!color.active && ' (inativa)'}
-                  </label>
-                  {variant && (
-                    <ImagePicker
-                      single
-                      images={variant.image ? [variant.image] : []}
-                      folder="products"
-                      title={`IMAGEM — ${color.name.toUpperCase()}`}
-                      description="Usada quando o cliente selecionar esta cor."
-                      onChange={(images) => setColorImage(color.id, images[0] || '')}
-                      onAdd={(images) => setColorImage(color.id, images[0] || '')}
+                    <Input
+                      required
+                      value={color.hex}
+                      maxLength={7}
+                      pattern="#[0-9A-Fa-f]{6}"
+                      onChange={(event) =>
+                        updateColor(color.id, { hex: event.target.value.toUpperCase() })
+                      }
                     />
-                  )}
-                </div>
-              )
-            })}
+                  </div>
+                </label>
+              </div>
+              <ImagePicker
+                single
+                images={color.image ? [color.image] : []}
+                folder="products"
+                title={`IMAGEM — ${color.name.trim().toUpperCase() || `COR ${index + 1}`}`}
+                description="Esta miniatura será exibida como opção na página do produto."
+                onChange={(images) => updateColor(color.id, { image: images[0] || '' })}
+                onAdd={(images) => updateColor(color.id, { image: images[0] || '' })}
+              />
+            </div>
+          ))}
         </div>
       </section>
       <div className="admin-checkboxes">

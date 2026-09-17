@@ -3,7 +3,7 @@
 
 create table if not exists public.colors (
   id uuid primary key default gen_random_uuid(),
-  name text not null unique,
+  name text not null,
   hex_code text not null,
   active boolean not null default true,
   created_at timestamptz not null default now(),
@@ -11,6 +11,9 @@ create table if not exists public.colors (
   constraint colors_name_not_blank check (length(trim(name)) > 0),
   constraint colors_hex_format check (hex_code ~ '^#[0-9A-Fa-f]{6}$')
 );
+
+-- As cores são cadastradas dentro de cada produto e podem repetir o mesmo nome.
+alter table public.colors drop constraint if exists colors_name_key;
 
 create table if not exists public.product_colors (
   product_id uuid not null references public.products(id) on update cascade on delete cascade,
