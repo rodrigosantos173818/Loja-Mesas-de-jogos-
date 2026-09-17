@@ -8,11 +8,21 @@ type Props = {
   images: string[]
   folder: 'products' | 'categories'
   single?: boolean
+  title?: string
+  description?: string
   onChange: (images: string[]) => void
   onAdd: (images: string[]) => void
 }
 
-export function ImagePicker({ images, folder, single = false, onChange, onAdd }: Props) {
+export function ImagePicker({
+  images,
+  folder,
+  single = false,
+  title,
+  description,
+  onChange,
+  onAdd,
+}: Props) {
   const [uploading, setUploading] = useState(false)
   const [url, setUrl] = useState('')
   const [error, setError] = useState('')
@@ -52,9 +62,12 @@ export function ImagePicker({ images, folder, single = false, onChange, onAdd }:
     <div className="admin-images">
       <div className="admin-section-heading">
         <div>
-          <h3>{single ? 'IMAGEM DA CATEGORIA' : 'IMAGENS DO PRODUTO'}</h3>
+          <h3>{title || (single ? 'IMAGEM DA CATEGORIA' : 'IMAGENS DO PRODUTO')}</h3>
           <p>
-            {single ? 'A imagem aparece na vitrine.' : 'A primeira imagem é a principal na loja.'}
+            {description ||
+              (single
+                ? 'A imagem aparece na vitrine.'
+                : 'A primeira imagem é a principal na loja.')}
           </p>
         </div>
         <label className="admin-upload-button">

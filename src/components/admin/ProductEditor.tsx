@@ -3,7 +3,7 @@ import { Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ImagePicker } from '@/components/admin/ImagePicker'
-import type { Product, StoreBrand, StoreCategory } from '@/data/products'
+import type { Product, StoreBrand, StoreCategory, StoreColor } from '@/data/products'
 
 export function newProduct(category = '', brand = ''): Product {
   return {
@@ -25,6 +25,7 @@ export function newProduct(category = '', brand = ''): Product {
     volumes: 1,
     displayOrder: null,
     images: [],
+    colors: [],
     featured: false,
     premium: false,
     active: true,
@@ -35,6 +36,7 @@ type Props = {
   product: Product
   categories: StoreCategory[]
   brands: StoreBrand[]
+  colors: StoreColor[]
   onSave: (product: Product, brandName: string) => Promise<void>
   onCancel: () => void
 }
@@ -88,7 +90,7 @@ function DecimalInput({ value, onChange, required = false, optional = false }: D
   )
 }
 
-export function ProductEditor({ product, categories, brands, onSave, onCancel }: Props) {
+export function ProductEditor({ product, categories, brands, colors, onSave, onCancel }: Props) {
   const [draft, setDraft] = useState(product)
   const [brandName, setBrandName] = useState(
     () => brands.find((item) => item.slug === product.brand)?.name || product.brand,
@@ -99,6 +101,25 @@ export function ProductEditor({ product, categories, brands, onSave, onCancel }:
 
   function update<K extends keyof Product>(key: K, value: Product[K]) {
     setDraft((current) => ({ ...current, [key]: value }))
+  }
+
+  function toggleColor(color: StoreColor) {
+    setDraft((current) => {
+      const selected = current.colors.some((item) => item.id === color.id)
+      return {
+        ...current,
+        colors: selected
+          ? current.colors.filter((item) => item.id !== color.id)
+          : [...current.colors, { ...color, image: '' }],
+      }
+    })
+  }
+
+  function setColorImage(colorId: string, image: string) {
+    setDraft((current) => ({
+      ...current,
+      colors: current.colors.map((item) => (item.id === colorId ? { ...item, image } : item)),
+    }))
   }
 
   async function submit(event: FormEvent) {
@@ -317,6 +338,49 @@ export function ProductEditor({ product, categories, brands, onSave, onCancel }:
           setDraft((current) => ({ ...current, images: [...current.images, ...images] }))
         }
       />
+      <section className="admin-product-colors">
+        <div className="admin-section-heading">
+          <div>
+            <h3>CORES DISPONÍVEIS</h3>
+            <p>Selecione as cores deste produto e, se quiser, envie uma imagem específica.</p>
+          </div>
+        </div>
+        {!colors.length && (
+          <p className="admin-empty">Cadastre uma cor na seção Cores antes de vinculá-la.</p>
+        )}
+        <div className="admin-color-options">
+          {colors
+            .filter((color) => color.active || draft.colors.some((item) => item.id === color.id))
+            .map((color) => {
+              const variant = draft.colors.find((item) => item.id === color.id)
+              return (
+                <div className="admin-color-option" key={color.id}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(variant)}
+                      onChange={() => toggleColor(color)}
+                    />
+                    <span className="color-swatch" style={{ backgroundColor: color.hex }} />
+                    {color.name}
+                    {!color.active && ' (inativa)'}
+                  </label>
+                  {variant && (
+                    <ImagePicker
+                      single
+                      images={variant.image ? [variant.image] : []}
+                      folder="products"
+                      title={`IMAGEM — ${color.name.toUpperCase()}`}
+                      description="Usada quando o cliente selecionar esta cor."
+                      onChange={(images) => setColorImage(color.id, images[0] || '')}
+                      onAdd={(images) => setColorImage(color.id, images[0] || '')}
+                    />
+                  )}
+                </div>
+              )
+            })}
+        </div>
+      </section>
       <div className="admin-checkboxes">
         <label>
           <input

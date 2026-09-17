@@ -17,6 +17,8 @@ export type OrderItem = {
   product_name: string
   product_slug: string
   image: string
+  color_name: string
+  color_hex: string
   quantity: number
   unit_price: number
   line_total: number

@@ -56,28 +56,43 @@ export function CartPage() {
           <div className="cart-layout">
             <div className="cart-items">
               {lines.map(({ item, product }) => (
-                <div className="cart-item" key={item.productId}>
+                <div className="cart-item" key={`${item.productId}-${item.colorId || 'default'}`}>
                   <Link to={`/produto/${product!.slug}`}>
-                    <img src={product!.images[0]} alt={product!.name} />
+                    <img
+                      src={
+                        product!.colors.find((color) => color.id === item.colorId)?.image ||
+                        product!.images[0]
+                      }
+                      alt={product!.name}
+                    />
                   </Link>
                   <div className="cart-item-main">
                     <span className="eyebrow green">{product!.category}</span>
                     <Link to={`/produto/${product!.slug}`} className="cart-item-title">
                       {product!.name}
                     </Link>
+                    {item.colorId && (
+                      <span className="cart-item-color">
+                        Cor: {product!.colors.find((color) => color.id === item.colorId)?.name}
+                      </span>
+                    )}
                     <span className="cart-item-unit">
                       {currency(salePrice(product!))} / unidade
                     </span>
                     <div className="quantity-control">
                       <button
-                        onClick={() => updateQuantity(item.productId, item.quantity - 1)}
+                        onClick={() =>
+                          updateQuantity(item.productId, item.quantity - 1, item.colorId)
+                        }
                         aria-label={`Diminuir quantidade de ${product!.name}`}
                       >
                         <Minus size={16} />
                       </button>
                       <span>{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
+                        onClick={() =>
+                          updateQuantity(item.productId, item.quantity + 1, item.colorId)
+                        }
                         aria-label={`Aumentar quantidade de ${product!.name}`}
                       >
                         <Plus size={16} />
@@ -87,7 +102,7 @@ export function CartPage() {
                   <div className="cart-item-side">
                     <strong>{currency(salePrice(product!) * item.quantity)}</strong>
                     <button
-                      onClick={() => updateQuantity(item.productId, 0)}
+                      onClick={() => updateQuantity(item.productId, 0, item.colorId)}
                       aria-label={`Remover ${product!.name}`}
                     >
                       <Trash2 size={17} />

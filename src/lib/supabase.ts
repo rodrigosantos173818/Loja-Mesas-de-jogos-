@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
-import type { Product, StoreBrand, StoreCategory } from '@/data/products'
+import type { Product, StoreBrand, StoreCategory, StoreColor } from '@/data/products'
 import { publicSupabaseAnonKey, publicSupabaseUrl } from '@/lib/supabase-public'
 
 const url = import.meta.env.VITE_SUPABASE_URL?.trim() || publicSupabaseUrl
@@ -35,9 +35,27 @@ export function fromDb(row: Record<string, unknown>): Product {
     volumes: Number(row.volumes ?? 1),
     displayOrder: row.display_order == null ? null : Number(row.display_order),
     images: Array.isArray(row.images) ? row.images.map(String) : [],
+    colors: [],
     featured: Boolean(row.featured),
     premium: Boolean(row.premium),
     active: Boolean(row.active),
+  }
+}
+
+export function colorFromDb(row: Record<string, unknown>): StoreColor {
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    hex: String(row.hex_code || '#000000').toUpperCase(),
+    active: Boolean(row.active),
+  }
+}
+
+export function colorToDb(color: StoreColor) {
+  return {
+    name: color.name.trim(),
+    hex_code: color.hex.toUpperCase(),
+    active: color.active,
   }
 }
 

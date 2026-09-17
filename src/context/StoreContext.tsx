@@ -14,27 +14,31 @@ import {
   type Product,
   type StoreBrand,
   type StoreCategory,
+  type StoreColor,
 } from '@/data/products'
 import {
   brandFromDb,
   brandToDb,
   categoryFromDb,
   categoryToDb,
+  colorFromDb,
+  colorToDb,
   fromDb,
   supabase,
   toDb,
 } from '@/lib/supabase'
 
-type CartItem = { productId: string; quantity: number }
+export type CartItem = { productId: string; quantity: number; colorId?: string }
 type StoreContextValue = {
   products: Product[]
   categories: StoreCategory[]
   brands: StoreBrand[]
+  colors: StoreColor[]
   loading: boolean
   cart: CartItem[]
   cartCount: number
-  addToCart: (productId: string, quantity?: number) => void
-  updateQuantity: (productId: string, quantity: number) => void
+  addToCart: (productId: string, quantity?: number, colorId?: string) => void
+  updateQuantity: (productId: string, quantity: number, colorId?: string) => void
   clearCart: () => void
   saveProduct: (product: Product) => Promise<void>
   deleteProduct: (id: string) => Promise<void>
@@ -44,6 +48,8 @@ type StoreContextValue = {
   saveCategory: (category: StoreCategory, originalSlug?: string) => Promise<void>
   deleteCategory: (slug: string) => Promise<void>
   saveBrand: (brand: StoreBrand, originalSlug?: string) => Promise<void>
+  saveColor: (color: StoreColor) => Promise<void>
+  deleteColor: (id: string) => Promise<void>
 }
 const StoreContext = createContext<StoreContextValue | null>(null)
 const PRODUCT_KEY = 'arena08-products'
@@ -59,6 +65,7 @@ function readLocalProducts(): Product[] {
           volumes: item.volumes ?? 1,
           displayOrder: item.displayOrder ?? null,
           brand: item.brand ?? 'arena-08',
+          colors: item.colors ?? [],
         }))
       : seedProducts
   } catch {
@@ -80,6 +87,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     supabase ? [] : seedCategories,
   )
   const [brands, setBrands] = useState<StoreBrand[]>(() => (supabase ? [] : seedBrands))
+  const [colors, setColors] = useState<StoreColor[]>([])
   const [cart, setCart] = useState<CartItem[]>(readCart)
   const [loading, setLoading] = useState(Boolean(supabase))
   const broadcast = useRef<BroadcastChannel | null>(null)
@@ -89,6 +97,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setProducts(readLocalProducts())
       setCategories(seedCategories)
       setBrands(seedBrands)
+      setColors([])
       setLoading(false)
       return
     }
@@ -105,17 +114,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         return ordered
       }
-      const [productResult, categoryResult, brandResult] = await Promise.all([
-        loadProducts(),
-        client.from('categories').select('*').order('sort_order', { ascending: true }),
-        client.from('brands').select('*').order('sort_order', { ascending: true }),
-      ])
-      if (productResult.data && !productResult.error) setProducts(productResult.data.map(fromDb))
+      const [productResult, categoryResult, brandResult, colorResult, productColorResult] =
+        await Promise.all([
+          loadProducts(),
+          client.from('categories').select('*').order('sort_order', { ascending: true }),
+          client.from('brands').select('*').order('sort_order', { ascending: true }),
+          client.from('colors').select('*').order('name', { ascending: true }),
+          client.from('product_colors').select('product_id,color_id,image'),
+        ])
+      const loadedColors =
+        colorResult.data && !colorResult.error ? colorResult.data.map(colorFromDb) : []
+      if (productResult.data && !productResult.error) {
+        const relations =
+          productColorResult.data && !productColorResult.error ? productColorResult.data : []
+        setProducts(
+          productResult.data.map((row) => {
+            const product = fromDb(row)
+            product.colors = relations
+              .filter((relation) => String(relation.product_id) === product.id)
+              .map((relation) => {
+                const color = loadedColors.find((item) => item.id === String(relation.color_id))
+                return color ? { ...color, image: String(relation.image || '') } : null
+              })
+              .filter((color): color is NonNullable<typeof color> => color !== null)
+            return product
+          }),
+        )
+      }
       if (categoryResult.data && !categoryResult.error)
         setCategories(categoryResult.data.map(categoryFromDb))
       else setCategories((current) => (current.length ? current : seedCategories))
       if (brandResult.data && !brandResult.error) setBrands(brandResult.data.map(brandFromDb))
       else setBrands((current) => (current.length ? current : seedBrands))
+      if (!colorResult.error) setColors(loadedColors)
     } catch {
       // Mantém o último catálogo disponível durante uma falha temporária de rede.
     } finally {
@@ -136,6 +167,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         void refreshCatalog()
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'brands' }, () => {
+        void refreshCatalog()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'colors' }, () => {
+        void refreshCatalog()
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'product_colors' }, () => {
         void refreshCatalog()
       })
       .subscribe()
@@ -162,24 +199,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(CART_KEY, JSON.stringify(cart))
   }, [cart])
 
-  function addToCart(productId: string, quantity = 1) {
+  function addToCart(productId: string, quantity = 1, colorId?: string) {
     setCart((current) => {
-      const existing = current.find((item) => item.productId === productId)
+      const existing = current.find(
+        (item) => item.productId === productId && item.colorId === colorId,
+      )
       return existing
         ? current.map((item) =>
-            item.productId === productId
+            item.productId === productId && item.colorId === colorId
               ? { ...item, quantity: Math.min(20, item.quantity + quantity) }
               : item,
           )
-        : [...current, { productId, quantity: Math.min(20, quantity) }]
+        : [...current, { productId, quantity: Math.min(20, quantity), colorId }]
     })
   }
-  function updateQuantity(productId: string, quantity: number) {
+  function updateQuantity(productId: string, quantity: number, colorId?: string) {
     setCart((current) =>
       quantity <= 0
-        ? current.filter((item) => item.productId !== productId)
+        ? current.filter((item) => !(item.productId === productId && item.colorId === colorId))
         : current.map((item) =>
-            item.productId === productId ? { ...item, quantity: Math.min(20, quantity) } : item,
+            item.productId === productId && item.colorId === colorId
+              ? { ...item, quantity: Math.min(20, quantity) }
+              : item,
           ),
     )
   }
@@ -194,6 +235,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         ? await supabase.from('products').insert(row).select('id').single()
         : await supabase.from('products').update(row).eq('id', product.id).select('id').single()
       if (result.error) throw result.error
+      const productId = product.id.startsWith('new-') ? String(result.data.id) : product.id
+      const removed = await supabase.from('product_colors').delete().eq('product_id', productId)
+      const colorsSchemaMissing =
+        removed.error &&
+        (removed.error.code === '42P01' ||
+          removed.error.code === 'PGRST205' ||
+          removed.error.message.includes('product_colors'))
+      if (removed.error && !(colorsSchemaMissing && !product.colors.length)) throw removed.error
+      if (product.colors.length) {
+        const inserted = await supabase.from('product_colors').insert(
+          product.colors.map((color) => ({
+            product_id: productId,
+            color_id: color.id,
+            image: color.image,
+          })),
+        )
+        if (inserted.error) throw inserted.error
+      }
       await refreshCatalog()
       broadcast.current?.postMessage('changed')
     } else {
@@ -272,11 +331,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await refreshCatalog()
     broadcast.current?.postMessage('changed')
   }
+  async function saveColor(color: StoreColor) {
+    if (!supabase) throw new Error('Configure o Supabase para gerenciar cores.')
+    const row = colorToDb(color)
+    const result = color.id.startsWith('new-')
+      ? await supabase.from('colors').insert(row).select('id').single()
+      : await supabase.from('colors').update(row).eq('id', color.id).select('id').single()
+    if (result.error) throw result.error
+    await refreshCatalog()
+    broadcast.current?.postMessage('changed')
+  }
+  async function deleteColor(id: string) {
+    if (!supabase) throw new Error('Configure o Supabase para gerenciar cores.')
+    const { error } = await supabase.from('colors').delete().eq('id', id).select('id').single()
+    if (error) throw error
+    await refreshCatalog()
+    broadcast.current?.postMessage('changed')
+  }
   const value = useMemo(
     () => ({
       products,
       categories,
       brands,
+      colors,
       loading,
       cart,
       cartCount: cart.reduce((sum, item) => sum + item.quantity, 0),
@@ -291,8 +368,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       saveCategory,
       deleteCategory,
       saveBrand,
+      saveColor,
+      deleteColor,
     }),
-    [products, categories, brands, loading, cart],
+    [products, categories, brands, colors, loading, cart],
   )
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

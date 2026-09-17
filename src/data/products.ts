@@ -17,6 +17,17 @@ export type StoreBrand = {
   active: boolean
 }
 
+export type StoreColor = {
+  id: string
+  name: string
+  hex: string
+  active: boolean
+}
+
+export type ProductColor = StoreColor & {
+  image: string
+}
+
 export type Product = {
   id: string
   slug: string
@@ -36,6 +47,7 @@ export type Product = {
   volumes: number
   displayOrder: number | null
   images: string[]
+  colors: ProductColor[]
   featured: boolean
   premium: boolean
   active: boolean
@@ -111,6 +123,7 @@ export const seedProducts: Product[] = [
     volumes: 1,
     displayOrder: null,
     images: ['/images/sinuca-hero.webp'],
+    colors: [],
     featured: true,
     premium: true,
     active: true,
@@ -139,6 +152,7 @@ export const seedProducts: Product[] = [
     volumes: 1,
     displayOrder: null,
     images: ['/images/futmesa.webp'],
+    colors: [],
     featured: true,
     premium: true,
     active: true,
@@ -163,6 +177,7 @@ export const seedProducts: Product[] = [
     volumes: 1,
     displayOrder: null,
     images: ['/images/ping-pong.webp'],
+    colors: [],
     featured: true,
     premium: false,
     active: true,
@@ -187,6 +202,7 @@ export const seedProducts: Product[] = [
     volumes: 1,
     displayOrder: null,
     images: ['/images/pebolim.webp'],
+    colors: [],
     featured: true,
     premium: false,
     active: true,
@@ -211,6 +227,7 @@ export const seedProducts: Product[] = [
     volumes: 1,
     displayOrder: null,
     images: ['/images/sinuca-hero.webp'],
+    colors: [],
     featured: false,
     premium: false,
     active: true,
@@ -235,6 +252,7 @@ export const seedProducts: Product[] = [
     volumes: 1,
     displayOrder: null,
     images: ['/images/futmesa.webp'],
+    colors: [],
     featured: false,
     premium: false,
     active: true,
@@ -258,6 +276,7 @@ export const seedProducts: Product[] = [
     volumes: 1,
     displayOrder: null,
     images: ['/images/ping-pong.webp'],
+    colors: [],
     featured: false,
     premium: true,
     active: true,
@@ -282,6 +301,7 @@ export const seedProducts: Product[] = [
     volumes: 1,
     displayOrder: null,
     images: ['/images/pebolim.webp'],
+    colors: [],
     featured: false,
     premium: false,
     active: true,

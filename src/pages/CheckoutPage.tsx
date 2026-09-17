@@ -57,6 +57,10 @@ export function CheckoutPage() {
       setError('Seu carrinho está vazio.')
       return
     }
+    if (lines.some((line) => line.product!.colors.length > 0 && !line.item.colorId)) {
+      setError('Volte ao carrinho e selecione uma cor para todos os produtos com variação.')
+      return
+    }
     if (cleanCep(form.cep).length !== 8) {
       setError('Informe um CEP válido.')
       return
@@ -68,7 +72,11 @@ export function CheckoutPage() {
       try {
         const { data, error: orderError } = await supabase.rpc('place_order', {
           customer: { ...form, cep: cleanCep(form.cep) },
-          lines: lines.map((line) => ({ id: line.product!.id, quantity: line.item.quantity })),
+          lines: lines.map((line) => ({
+            id: line.product!.id,
+            quantity: line.item.quantity,
+            color_id: line.item.colorId || null,
+          })),
         })
         if (orderError || !data) throw orderError || new Error('Pedido não criado.')
         orderCode = `#${String(data).padStart(5, '0')}`
@@ -81,7 +89,7 @@ export function CheckoutPage() {
     const productsText = lines
       .map(
         (line) =>
-          `• ${line.product!.name} — ${line.item.quantity}x — ${currency(salePrice(line.product!) * line.item.quantity)}`,
+          `• ${line.product!.name}${line.item.colorId ? ` (${line.product!.colors.find((color) => color.id === line.item.colorId)?.name})` : ''} — ${line.item.quantity}x — ${currency(salePrice(line.product!) * line.item.quantity)}`,
       )
       .join('\n')
     const message = `Olá! Quero finalizar meu pedido na ARENA 08.\n\n${productsText}\n\nSubtotal: ${currency(subtotal)}\nFrete: confirmar para CEP ${form.cep}\n\nNome: ${form.name}\nE-mail: ${form.email}\nTelefone: ${form.phone}\nEntrega: ${form.address}, ${form.number}${form.complement ? `, ${form.complement}` : ''} — ${form.city}/${form.state} — CEP ${form.cep}${form.note ? `\nObservações: ${form.note}` : ''}\n\nGostaria de confirmar disponibilidade, entrega e pagamento.`
@@ -241,10 +249,25 @@ export function CheckoutPage() {
             <aside className="checkout-summary">
               <h2>SEU PEDIDO</h2>
               {lines.map((line) => (
-                <div className="checkout-line" key={line.item.productId}>
-                  <img src={line.product!.images[0]} alt="" />
+                <div
+                  className="checkout-line"
+                  key={`${line.item.productId}-${line.item.colorId || 'default'}`}
+                >
+                  <img
+                    src={
+                      line.product!.colors.find((color) => color.id === line.item.colorId)?.image ||
+                      line.product!.images[0]
+                    }
+                    alt=""
+                  />
                   <div>
                     <strong>{line.product!.name}</strong>
+                    {line.item.colorId && (
+                      <small>
+                        Cor:{' '}
+                        {line.product!.colors.find((color) => color.id === line.item.colorId)?.name}
+                      </small>
+                    )}
                     <span>
                       {line.item.quantity}x {currency(salePrice(line.product!))}
                     </span>

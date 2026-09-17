@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Package,
+  Palette,
   Pencil,
   Plus,
   RefreshCw,
@@ -22,6 +23,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CategoryEditor, newCategory } from '@/components/admin/CategoryEditor'
+import { ColorEditor, newColor } from '@/components/admin/ColorEditor'
 import { ProductEditor, newProduct } from '@/components/admin/ProductEditor'
 import {
   brandLabel,
@@ -29,6 +31,7 @@ import {
   salePrice,
   type Product,
   type StoreCategory,
+  type StoreColor,
 } from '@/data/products'
 import { useStore } from '@/context/StoreContext'
 import { useAdminAuth } from '@/context/AdminAuthContext'
@@ -41,11 +44,12 @@ import {
 } from '@/lib/admin'
 import { currency } from '@/lib/utils'
 
-type Section = 'dashboard' | 'products' | 'categories' | 'orders'
+type Section = 'dashboard' | 'products' | 'categories' | 'colors' | 'orders'
 const sections = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'products', label: 'Produtos', icon: Package },
   { id: 'categories', label: 'Categorias', icon: Tags },
+  { id: 'colors', label: 'Cores', icon: Palette },
   { id: 'orders', label: 'Pedidos', icon: ClipboardList },
 ] as const
 
@@ -62,17 +66,21 @@ export function AdminPage() {
     products,
     categories,
     brands,
+    colors,
     saveProduct,
     deleteProduct,
     reorderProducts,
     saveCategory,
     deleteCategory,
     saveBrand,
+    saveColor,
+    deleteColor,
   } = useStore()
   const { signOut } = useAdminAuth()
   const [section, setSection] = useState<Section>('dashboard')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [editingCategory, setEditingCategory] = useState<StoreCategory | null>(null)
+  const [editingColor, setEditingColor] = useState<StoreColor | null>(null)
   const [originalCategorySlug, setOriginalCategorySlug] = useState<string | undefined>()
   const [orders, setOrders] = useState<Order[]>([])
   const [notice, setNotice] = useState('')
@@ -82,6 +90,8 @@ export function AdminPage() {
   const [productStatus, setProductStatus] = useState('all')
   const [categorySearch, setCategorySearch] = useState('')
   const [categoryStatus, setCategoryStatus] = useState('all')
+  const [colorSearch, setColorSearch] = useState('')
+  const [colorStatus, setColorStatus] = useState('all')
   const [orderSearch, setOrderSearch] = useState('')
   const [orderStatus, setOrderStatus] = useState('all')
   const [openOrder, setOpenOrder] = useState<string | null>(null)
@@ -111,6 +121,7 @@ export function AdminPage() {
     setSection(next)
     setEditingProduct(null)
     setEditingCategory(null)
+    setEditingColor(null)
     setNotice('')
   }
 
@@ -136,6 +147,12 @@ export function AdminPage() {
     setNotice('Categoria salva. A loja pública já foi atualizada.')
   }
 
+  async function persistColor(color: StoreColor) {
+    await saveColor(color)
+    setEditingColor(null)
+    setNotice('Cor salva. As variações da loja já foram atualizadas.')
+  }
+
   async function removeProduct(product: Product) {
     if (!window.confirm(`Excluir o produto “${product.name}”?`)) return
     try {
@@ -157,6 +174,16 @@ export function AdminPage() {
           ? 'Mova os produtos desta categoria antes de excluí-la.'
           : errorMessage(cause, 'Não foi possível excluir a categoria.'),
       )
+    }
+  }
+
+  async function removeColor(color: StoreColor) {
+    if (!window.confirm(`Excluir a cor “${color.name}”? Ela será removida dos produtos.`)) return
+    try {
+      await deleteColor(color.id)
+      setNotice('Cor excluída.')
+    } catch (cause) {
+      setNotice(errorMessage(cause, 'Não foi possível excluir a cor.'))
     }
   }
 
@@ -199,6 +226,15 @@ export function AdminPage() {
     }
   }
 
+  async function toggleColor(color: StoreColor) {
+    try {
+      await saveColor({ ...color, active: !color.active })
+      setNotice(color.active ? 'Cor desativada.' : 'Cor ativada.')
+    } catch (cause) {
+      setNotice(errorMessage(cause, 'Não foi possível alterar o status da cor.'))
+    }
+  }
+
   async function changeOrderStatus(order: Order, status: OrderStatus) {
     setChangingOrder(order.id)
     try {
@@ -227,6 +263,11 @@ export function AdminPage() {
     (item) =>
       `${item.name} ${item.slug}`.toLowerCase().includes(categorySearch.toLowerCase()) &&
       (categoryStatus === 'all' || (categoryStatus === 'active' ? item.active : !item.active)),
+  )
+  const filteredColors = colors.filter(
+    (item) =>
+      `${item.name} ${item.hex}`.toLowerCase().includes(colorSearch.toLowerCase()) &&
+      (colorStatus === 'all' || (colorStatus === 'active' ? item.active : !item.active)),
   )
   const filteredOrders = orders.filter(
     (item) =>
@@ -288,7 +329,9 @@ export function AdminPage() {
                     ? 'Seu catálogo, preços e imagens.'
                     : section === 'categories'
                       ? 'Organize a vitrine da loja.'
-                      : 'Acompanhe os pedidos recebidos.'}
+                      : section === 'colors'
+                        ? 'Cadastre as opções de acabamento dos produtos.'
+                        : 'Acompanhe os pedidos recebidos.'}
               </p>
             </div>
             {section === 'products' && !editingProduct && (
@@ -313,6 +356,11 @@ export function AdminPage() {
                 }}
               >
                 <Plus size={17} /> Nova categoria
+              </Button>
+            )}
+            {section === 'colors' && !editingColor && (
+              <Button onClick={() => setEditingColor(newColor())}>
+                <Plus size={17} /> Nova cor
               </Button>
             )}
             {section === 'orders' && (
@@ -413,6 +461,7 @@ export function AdminPage() {
                 product={editingProduct}
                 categories={categories}
                 brands={brands}
+                colors={colors}
                 onSave={persistProduct}
                 onCancel={() => setEditingProduct(null)}
               />
@@ -678,6 +727,105 @@ export function AdminPage() {
               </>
             ))}
 
+          {section === 'colors' &&
+            (editingColor ? (
+              <ColorEditor
+                key={editingColor.id}
+                color={editingColor}
+                onSave={persistColor}
+                onCancel={() => setEditingColor(null)}
+              />
+            ) : (
+              <>
+                <div className="admin-toolbar">
+                  <span>
+                    {filteredColors.length} DE {colors.length} CORES
+                  </span>
+                  <div className="admin-filters">
+                    <label className="admin-search">
+                      <Search size={16} />
+                      <Input
+                        placeholder="Buscar cor..."
+                        value={colorSearch}
+                        onChange={(event) => setColorSearch(event.target.value)}
+                      />
+                    </label>
+                    <select
+                      aria-label="Filtrar cores por status"
+                      value={colorStatus}
+                      onChange={(event) => setColorStatus(event.target.value)}
+                    >
+                      <option value="all">Todos os status</option>
+                      <option value="active">Ativas</option>
+                      <option value="inactive">Inativas</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="admin-table-wrap">
+                  <table className="admin-table">
+                    <thead>
+                      <tr>
+                        <th>COR</th>
+                        <th>HEX</th>
+                        <th>STATUS</th>
+                        <th>AÇÕES</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredColors.map((item) => (
+                        <tr key={item.id}>
+                          <td>
+                            <div className="admin-color-cell">
+                              <span
+                                className="color-swatch"
+                                style={{ backgroundColor: item.hex }}
+                              />
+                              <strong>{item.name}</strong>
+                            </div>
+                          </td>
+                          <td>{item.hex}</td>
+                          <td>
+                            <span className={item.active ? 'status-active' : 'status-inactive'}>
+                              {item.active ? 'Ativa' : 'Inativa'}
+                            </span>
+                          </td>
+                          <td>
+                            <div className="admin-row-actions">
+                              <button
+                                type="button"
+                                aria-label={`Editar ${item.name}`}
+                                title="Editar"
+                                onClick={() => setEditingColor(item)}
+                              >
+                                <Pencil size={17} />
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`${item.active ? 'Desativar' : 'Ativar'} ${item.name}`}
+                                title={item.active ? 'Desativar' : 'Ativar'}
+                                onClick={() => void toggleColor(item)}
+                              >
+                                {item.active ? <EyeOff size={17} /> : <Eye size={17} />}
+                              </button>
+                              <button
+                                type="button"
+                                aria-label={`Excluir ${item.name}`}
+                                title="Excluir"
+                                onClick={() => void removeColor(item)}
+                              >
+                                <Trash2 size={17} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!filteredColors.length && <p className="admin-empty">Nenhuma cor encontrada.</p>}
+                </div>
+              </>
+            ))}
+
           {section === 'orders' && (
             <>
               <div className="admin-toolbar">
@@ -807,6 +955,15 @@ export function AdminPage() {
                           <img src={line.image || '/images/sinuca-hero.webp'} alt="" />
                           <div>
                             <strong>{line.product_name}</strong>
+                            {line.color_name && (
+                              <small className="admin-order-color">
+                                <span
+                                  className="color-swatch"
+                                  style={{ backgroundColor: line.color_hex }}
+                                />
+                                {line.color_name}
+                              </small>
+                            )}
                             <span>
                               {line.quantity} × {currency(line.unit_price)}
                             </span>

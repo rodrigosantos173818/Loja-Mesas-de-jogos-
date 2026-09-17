@@ -9,6 +9,10 @@ export function ProductCard({ product }: { product: Product }) {
   const { addToCart, categories, brands } = useStore()
   const navigate = useNavigate()
   function buy() {
+    if (product.colors.length) {
+      navigate(`/produto/${product.slug}`)
+      return
+    }
     addToCart(product.id)
     navigate('/carrinho')
   }

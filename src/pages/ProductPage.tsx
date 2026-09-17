@@ -24,11 +24,15 @@ export function ProductPage() {
   const navigate = useNavigate()
   const { products, categories, brands, addToCart, loading } = useStore()
   const [quantity, setQuantity] = useState(1)
+  const [selectedColorId, setSelectedColorId] = useState('')
+  const [colorError, setColorError] = useState('')
   const product = products.find(
     (item) => item.slug === slug && isVisibleProduct(item, categories, brands),
   )
   useEffect(() => {
     setQuantity(1)
+    setSelectedColorId('')
+    setColorError('')
   }, [slug])
   if (loading)
     return (
@@ -55,8 +59,16 @@ export function ProductPage() {
         item.id !== product.id,
     )
     .slice(0, 3)
+  const selectedColor = product.colors.find((color) => color.id === selectedColorId)
+  const galleryImages = selectedColor?.image
+    ? [selectedColor.image, ...product.images.filter((image) => image !== selectedColor.image)]
+    : product.images
   function buy() {
-    addToCart(product!.id, quantity)
+    if (product!.colors.length && !selectedColor) {
+      setColorError('Selecione uma cor antes de adicionar ao carrinho.')
+      return
+    }
+    addToCart(product!.id, quantity, selectedColor?.id)
     navigate('/carrinho')
   }
   return (
@@ -73,8 +85,8 @@ export function ProductPage() {
         </div>
         <div className="product-detail">
           <ProductImageCarousel
-            key={product.id}
-            images={product.images}
+            key={`${product.id}-${selectedColorId}`}
+            images={galleryImages}
             productName={product.name}
             premium={product.premium}
           />
@@ -103,6 +115,37 @@ export function ProductPage() {
                 <small>à vista</small>
               </div>
             </div>
+            {product.colors.length > 0 && (
+              <div className="product-colors">
+                <div className="product-color-heading">
+                  <span>COR</span>
+                  <strong>{selectedColor?.name || 'Selecione uma cor'}</strong>
+                </div>
+                <div className="product-color-swatches" role="group" aria-label="Cores disponíveis">
+                  {product.colors.map((color) => (
+                    <button
+                      key={color.id}
+                      type="button"
+                      className={selectedColorId === color.id ? 'selected' : ''}
+                      onClick={() => {
+                        setSelectedColorId(color.id)
+                        setColorError('')
+                      }}
+                      title={color.name}
+                      aria-label={color.name}
+                      aria-pressed={selectedColorId === color.id}
+                    >
+                      <span style={{ backgroundColor: color.hex }} />
+                    </button>
+                  ))}
+                </div>
+                {colorError && (
+                  <p className="field-error" role="alert">
+                    {colorError}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="product-actions">
               <div className="quantity-control">
                 <button

@@ -1743,6 +1743,59 @@ h2 em {
   color: var(--muted);
   font-size: 11px;
 }
+.product-colors {
+  margin-top: 24px;
+}
+.product-color-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.product-color-heading span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+.product-color-heading strong {
+  font-size: 12px;
+}
+.product-color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+.product-color-swatches button {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+.product-color-swatches button:hover,
+.product-color-swatches button.selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px #19e66b2b;
+}
+.product-color-swatches button > span,
+.color-swatch {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: 1px solid #ffffff4d;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px #00000026;
+}
+.product-colors .field-error {
+  margin-top: 10px;
+}
 .product-actions {
   display: flex;
   gap: 10px;
@@ -1934,6 +1987,11 @@ h2 em {
 }
 .cart-item-unit {
   color: var(--muted);
+  font-size: 11px;
+}
+.cart-item-color,
+.checkout-line small {
+  color: var(--primary);
   font-size: 11px;
 }
 .cart-item .quantity-control {
@@ -3314,6 +3372,62 @@ h2 em {
 }
 .admin-form-error {
   margin: -8px 0 20px;
+}
+.admin-product-colors {
+  margin-bottom: 26px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #0b0f0c;
+}
+.admin-color-options {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+.admin-color-option {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.admin-color-option > label,
+.admin-color-cell,
+.admin-order-color {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.admin-color-option > label {
+  color: #d0dad1;
+  font-size: 12px;
+  font-weight: 700;
+}
+.admin-color-option > label input {
+  accent-color: var(--primary);
+}
+.admin-color-option .admin-images {
+  margin: 14px 0 0 25px;
+  padding: 16px;
+  border: 1px solid var(--border);
+}
+.admin-color-cell .color-swatch,
+.admin-order-color .color-swatch {
+  width: 18px;
+  height: 18px;
+}
+.admin-hex-field {
+  display: flex;
+  gap: 9px;
+}
+.admin-hex-field > input[type='color'] {
+  width: 48px;
+  height: 42px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--card);
+}
+.admin-order-color {
+  color: var(--primary);
 }
 .admin-images .admin-section-heading h3 {
   margin: 0;
