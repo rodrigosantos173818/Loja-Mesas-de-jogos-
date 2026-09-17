@@ -6,6 +6,7 @@
     { "source": "/produto/:slug", "destination": "/index.html" },
     { "source": "/carrinho", "destination": "/index.html" },
     { "source": "/checkout", "destination": "/index.html" },
+    { "source": "/admin/login", "destination": "/index.html" },
     { "source": "/admin", "destination": "/index.html" }
   ]
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -22,6 +22,7 @@ import { CategoryEditor, newCategory } from '@/components/admin/CategoryEditor'
 import { ProductEditor, newProduct } from '@/components/admin/ProductEditor'
 import { categoryLabel, salePrice, type Product, type StoreCategory } from '@/data/products'
 import { useStore } from '@/context/StoreContext'
+import { useAdminAuth } from '@/context/AdminAuthContext'
 import {
   fetchOrders,
   orderStatuses,
@@ -29,7 +30,6 @@ import {
   type Order,
   type OrderStatus,
 } from '@/lib/admin'
-import { supabase } from '@/lib/supabase'
 import { currency } from '@/lib/utils'
 
 type Section = 'dashboard' | 'products' | 'categories' | 'orders'
@@ -49,21 +49,9 @@ const errorMessage = (cause: unknown, fallback: string) =>
   cause instanceof Error ? cause.message : fallback
 
 export function AdminPage() {
-  const {
-    products,
-    categories,
-    saveProduct,
-    deleteProduct,
-    saveCategory,
-    deleteCategory,
-    refreshCatalog,
-  } = useStore()
-  const [checking, setChecking] = useState(Boolean(supabase))
-  const [authorized, setAuthorized] = useState(false)
-  const [loggingIn, setLoggingIn] = useState(false)
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [authError, setAuthError] = useState('')
+  const { products, categories, saveProduct, deleteProduct, saveCategory, deleteCategory } =
+    useStore()
+  const { signOut } = useAdminAuth()
   const [section, setSection] = useState<Section>('dashboard')
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [editingCategory, setEditingCategory] = useState<StoreCategory | null>(null)
@@ -81,36 +69,6 @@ export function AdminPage() {
   const [changingOrder, setChangingOrder] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!supabase) return
-    const client = supabase
-    let alive = true
-    void (async () => {
-      const { data, error } = await client.auth.getUser()
-      if (!alive) return
-      if (!error && data.user) {
-        const { data: admin } = await client
-          .from('admin_users')
-          .select('user_id')
-          .eq('user_id', data.user.id)
-          .maybeSingle()
-        if (alive) setAuthorized(Boolean(admin))
-      }
-      if (alive) setChecking(false)
-    })()
-    const { data: listener } = client.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') {
-        setAuthorized(false)
-        setOrders([])
-      }
-    })
-    return () => {
-      alive = false
-      listener.subscription.unsubscribe()
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!authorized) return
     let alive = true
     const load = async () => {
       try {
@@ -127,43 +85,7 @@ export function AdminPage() {
       alive = false
       window.removeEventListener('focus', onFocus)
     }
-  }, [authorized])
-
-  async function login(event: FormEvent) {
-    event.preventDefault()
-    if (!supabase) return
-    setLoggingIn(true)
-    setAuthError('')
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error || !data.user) throw new Error('E-mail ou senha inválidos.')
-      const { data: admin, error: accessError } = await supabase
-        .from('admin_users')
-        .select('user_id')
-        .eq('user_id', data.user.id)
-        .maybeSingle()
-      if (accessError || !admin) {
-        await supabase.auth.signOut()
-        throw new Error('Esta conta não tem acesso ao painel.')
-      }
-      setAuthorized(true)
-      setPassword('')
-      await refreshCatalog()
-    } catch (cause) {
-      setAuthError(errorMessage(cause, 'Não foi possível entrar.'))
-    } finally {
-      setLoggingIn(false)
-    }
-  }
-
-  async function logout() {
-    if (supabase) await supabase.auth.signOut()
-    setAuthorized(false)
-    setOrders([])
-    setEditingProduct(null)
-    setEditingCategory(null)
-    await refreshCatalog()
-  }
+  }, [])
 
   function navigate(next: Section) {
     setSection(next)
@@ -263,76 +185,6 @@ export function AdminPage() {
       (orderStatus === 'all' || item.status === orderStatus),
   )
 
-  if (!supabase)
-    return (
-      <main className="admin-auth-page">
-        <div className="admin-login">
-          <Link to="/" className="admin-auth-back">
-            ← Voltar à loja
-          </Link>
-          <p className="eyebrow green">ACESSO RESTRITO</p>
-          <h1>
-            PAINEL ADMIN<em>.</em>
-          </h1>
-          <p>
-            Configure as variáveis do Supabase e execute o esquema SQL para habilitar o painel
-            protegido.
-          </p>
-        </div>
-      </main>
-    )
-  if (checking)
-    return (
-      <main className="admin-auth-page">
-        <div className="admin-login">Verificando acesso...</div>
-      </main>
-    )
-  if (!authorized)
-    return (
-      <main className="admin-auth-page">
-        <div className="admin-login">
-          <Link to="/" className="admin-auth-back">
-            ← Voltar à loja
-          </Link>
-          <p className="eyebrow green">ACESSO RESTRITO</p>
-          <h1>
-            PAINEL ADMIN<em>.</em>
-          </h1>
-          <p>Entre com uma conta autorizada para gerenciar a ARENA 08.</p>
-          <form onSubmit={(event) => void login(event)}>
-            <label>
-              E-mail
-              <Input
-                type="email"
-                required
-                autoComplete="username"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-              />
-            </label>
-            <label>
-              Senha
-              <Input
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-              />
-            </label>
-            {authError && (
-              <p className="field-error" role="alert">
-                {authError}
-              </p>
-            )}
-            <Button type="submit" disabled={loggingIn}>
-              {loggingIn ? 'Entrando...' : 'Entrar'} <ArrowRight size={17} />
-            </Button>
-          </form>
-        </div>
-      </main>
-    )
-
   return (
     <main className="admin-shell">
       <aside className="admin-sidebar">
@@ -356,7 +208,7 @@ export function AdminPage() {
           <Link to="/" target="_blank" rel="noopener noreferrer">
             <ExternalLink size={17} /> Ver loja
           </Link>
-          <button type="button" onClick={() => void logout()}>
+          <button type="button" onClick={() => void signOut()}>
             <LogOut size={17} /> Sair
           </button>
         </div>

@@ -2803,6 +2803,26 @@ h2 em {
 .admin-auth-back:hover {
   color: var(--primary);
 }
+.admin-auth-message {
+  padding: 11px 13px;
+  border: 1px solid #31583a;
+  border-radius: 5px;
+  background: #13251a;
+  color: #b4e9c3;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.admin-login form .admin-auth-mode {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.admin-login form .admin-auth-mode:hover {
+  color: var(--primary);
+}
 .admin-shell {
   min-height: 100vh;
   display: grid;

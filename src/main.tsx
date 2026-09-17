@@ -3,6 +3,8 @@ import ReactDOM from 'react-dom/client'
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { StoreProvider } from '@/context/StoreContext'
+import { AdminAuthProvider } from '@/context/AdminAuthContext'
+import { RequireAdmin } from '@/components/admin/RequireAdmin'
 import { Header } from '@/components/Header'
 import { Footer } from '@/components/Footer'
 import { HomePage } from '@/pages/HomePage'
@@ -11,6 +13,7 @@ import { ProductPage } from '@/pages/ProductPage'
 import { CartPage } from '@/pages/CartPage'
 import { CheckoutPage } from '@/pages/CheckoutPage'
 import { AdminPage } from '@/pages/AdminPage'
+import { AdminLoginPage } from '@/pages/AdminLoginPage'
 import './index.css'
 
 function RouteEffects() {
@@ -60,7 +63,15 @@ function AppRoutes() {
           <Route path="/produto/:slug" element={<ProductPage />} />
           <Route path="/carrinho" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
-          <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route
+            path="/admin"
+            element={
+              <RequireAdmin>
+                <AdminPage />
+              </RequireAdmin>
+            }
+          />
           <Route path="*" element={<CatalogPage />} />
         </Routes>
       </div>
@@ -73,7 +84,9 @@ function App() {
   return (
     <StoreProvider>
       <BrowserRouter>
-        <AppRoutes />
+        <AdminAuthProvider>
+          <AppRoutes />
+        </AdminAuthProvider>
       </BrowserRouter>
     </StoreProvider>
   )

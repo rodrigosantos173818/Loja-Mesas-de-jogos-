@@ -14,15 +14,15 @@ Sem variáveis de ambiente, o catálogo público usa produtos de demonstração.
 ## Supabase
 
 1. Crie um projeto e execute [`supabase/schema.sql`](supabase/schema.sql) no SQL Editor. O arquivo também atualiza instalações que já usam a versão anterior do esquema.
-2. Crie uma conta em Authentication e adicione o UUID dela à tabela `admin_users` conforme o comentário `insert into public.admin_users` no SQL.
+2. Crie uma conta em Authentication. O gatilho do banco cria automaticamente uma linha em `profiles` com `role = 'customer'`. Para conceder acesso administrativo, altere somente esse perfil para `role = 'admin'` pelo SQL Editor.
 3. Copie `.env.example` para `.env.local` e preencha `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
 4. Para a API de frete consultar os dados reais do catálogo, configure também `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` somente nas variáveis do servidor da Vercel. Nunca exponha a service role em `VITE_`.
 
-O painel em `/admin` exige login autorizado. Produtos, categorias, pedidos e imagens usam RLS e políticas de Storage. O bucket público `product-images` guarda as imagens de produtos e categorias; somente administradores autenticados podem enviar ou apagar arquivos. A primeira imagem do produto é a principal, e a ordem configurada no painel aparece na galeria pública.
+O login fica em `/admin/login` e `/admin` é protegido por sessão e por `profiles.role = 'admin'`. A sessão é persistida pelo Supabase Auth; contas comuns são bloqueadas. Produtos, categorias, pedidos e imagens usam RLS e políticas de Storage. O bucket público `product-images` guarda as imagens de produtos e categorias; somente administradores autenticados podem enviar ou apagar arquivos. A primeira imagem do produto é a principal, e a ordem configurada no painel aparece na galeria pública.
 
 O checkout registra um pedido no Supabase pela função `place_order` antes de abrir o WhatsApp. Visitantes podem criar pedidos por essa função, mas não conseguem ler ou alterar pedidos diretamente. O painel permite consultar clientes, entrega e itens e atualizar o status. Sem Supabase, o checkout mantém o fluxo de demonstração pelo WhatsApp, sem criar pedidos no painel.
 
-As tabelas `products` e `categories` entram na publicação `supabase_realtime` para atualizar a vitrine em outras abas. A loja também refaz a consulta ao voltar para a aba. Depois de aplicar o SQL, cadastre o UUID do administrador na tabela `admin_users` usando o SQL Editor; não inclua a service role no frontend.
+As tabelas `products` e `categories` entram na publicação `supabase_realtime` para atualizar a vitrine em outras abas. A loja também refaz a consulta ao voltar para a aba. O esquema promove o usuário principal já criado para `profiles.role = 'admin'`. Para promover outro usuário, execute `update public.profiles set role = 'admin' where id = 'UUID';`. Não inclua a service role no frontend.
 
 ## Frete
 
