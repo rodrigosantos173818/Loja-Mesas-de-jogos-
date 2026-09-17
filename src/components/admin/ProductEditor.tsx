@@ -183,16 +183,11 @@ export function ProductEditor({ product, categories, brands, onSave, onCancel }:
           Marca
           <Input
             required
-            list="product-brand-options"
+            autoComplete="off"
             placeholder="Ex.: Klopf"
             value={brandName}
             onChange={(event) => setBrandName(event.target.value)}
           />
-          <datalist id="product-brand-options">
-            {brands.map((item) => (
-              <option key={item.slug} value={item.name} />
-            ))}
-          </datalist>
         </label>
         <label>
           Categoria
